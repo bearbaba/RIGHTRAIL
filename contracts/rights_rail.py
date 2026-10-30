@@ -33,6 +33,9 @@ class RightsRail(gl.Contract):
     def __init__(self):
         self.asset_count = u256(0)
         self.request_count = u256(0)
+        self.assets = TreeMap()
+        self.requests = TreeMap()
+        self.policies = TreeMap()
 
     def _asset(self, asset_id: int) -> dict:
         _require(asset_id > 0 and asset_id <= int(self.asset_count), "asset not found")
