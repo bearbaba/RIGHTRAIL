@@ -1,3 +1,4 @@
+**Historical snapshot notice (2026-10-30):** This runbook captured deployment/pre-video status. Later signed app flows have completed. For current user-facing results, see [README](../README.md) and [REVIEWER](../REVIEWER.md). The original diagnostic evidence below is retained for chronology.
 # RIGHTRAIL deployment — stable GenLayer Studio (61999)
 
 Studio: https://studio.genlayer.com · RPC: https://studio.genlayer.com/api · Explorer: https://explorer-studio.genlayer.com

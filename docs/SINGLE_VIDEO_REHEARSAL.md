@@ -1,3 +1,4 @@
+**Historical snapshot notice (2026-10-30):** This runbook captured deployment/pre-video status. Later signed app flows have completed. For current user-facing results, see [README](../README.md) and [REVIEWER](../REVIEWER.md). The original diagnostic evidence below is retained for chronology.
 # RIGHTRAIL — Single-video Testnet acceptance (chain 61999)
 
 **Do not spend another GenLayer Projects submission spot until all live checks pass.**

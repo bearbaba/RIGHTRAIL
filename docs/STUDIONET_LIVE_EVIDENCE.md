@@ -1,3 +1,4 @@
+**Historical snapshot notice (2026-10-30):** This runbook captured deployment/pre-video status. Later signed app flows have completed. For current user-facing results, see [README](../README.md) and [REVIEWER](../REVIEWER.md). The original diagnostic evidence below is retained for chronology.
 # RIGHTRAIL Studionet — independent deployed contract readback (2026-10-30)
 
 **Network:** stable GenLayer Studio / Studionet, chain 61999.  
