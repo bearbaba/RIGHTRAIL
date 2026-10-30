@@ -114,6 +114,17 @@ $('inspectAsset').onsubmit=async e=>{e.preventDefault();try{await inspectAsset(i
 $('examplePolicy').onclick=()=>{
   $('assetPolicy').value='Community members may use this content in free, non-commercial educational tutorials if the original creator is clearly credited with a visible link. Paid advertisements, resale, and training AI models are not permitted. Sponsorship-funded educational articles require explicit case-by-case approval; ambiguous requests must not be automatically granted.';
 };
+$('contentFile').onchange=async()=>{
+  const file=$('contentFile').files?.[0];
+  if(!file)return;
+  if(file.size>10*1024*1024)return notify('For this preview, select a file no larger than 10 MB.','error');
+  try{
+    const bytes=await file.arrayBuffer();
+    const digest=await crypto.subtle.digest('SHA-256',bytes);
+    $('contentDigest').value=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
+    notify('SHA-256 computed locally for '+file.name+'. File bytes were not uploaded.','ok');
+  }catch{notify('Could not hash this file in your browser.','error')}
+};
 function saveLocalDraft(){
   const draft={title:$('assetTitle').value.trim(),digest:$('contentDigest').value.trim(),policy:$('assetPolicy').value.trim()};
   try{sessionStorage.setItem('rightrail-draft-v1',JSON.stringify(draft))}catch{}
