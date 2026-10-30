@@ -1,0 +1,22 @@
+name: RIGHTRAIL linked contracts live audit
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify_live_pair.mjs'
+      - '.github/workflows/verify-live-pair.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unsigned-readback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - name: Verify both deployed sources and Gate constructor on chain 61999
+        run: node scripts/verify_live_pair.mjs

@@ -1,0 +1,30 @@
+import { createClient } from 'genlayer-stable';
+import { studionet } from 'genlayer-stable/chains';
+import { TransactionHashVariant } from 'genlayer-stable/types';
+import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+const RIGHTS='0xef37288aB08A30697841C4fFe93C1D71E23C464b';
+const GATE='0xCA57aF8cEe6d83029700A859cBaf93506839364E';
+const client=createClient({chain:studionet});
+const normalize=s=>s.replace(/\r\n/g,'\n').trimEnd();
+const hash=s=>createHash('sha256').update(Buffer.from(s,'utf8')).digest('hex');
+async function inspect(address,file,classname,required){
+ const deployed=await client.getContractCode(address);
+ const local=await readFile(new URL('../'+file,import.meta.url),'utf8');
+ if(!deployed?.includes('class '+classname+'(gl.Contract)'))throw Error('WRONG_CODE '+address);
+ const schema=await client.getContractSchema(address),found=Object.keys(schema?.methods||{});
+ for(const method of required)if(!found.includes(method))throw Error('MISSING_METHOD '+address+' '+method);
+ const same=normalize(deployed)===normalize(local);
+ console.log('SOURCE '+JSON.stringify({address,file,classname,exactBytesMatch:deployed===local,normalizedMatch:same,liveSha256:hash(deployed),repoSha256:hash(local),methods:found}));
+ if(!same)throw Error('DEPLOYED_SOURCE_MISMATCH '+address);
+}
+await inspect(RIGHTS,'contracts/rights_rail.py','RightsRail',['publish_asset','request_usage','adjudicate','permit_status','get_asset','totals']);
+await inspect(GATE,'contracts/access_gate.py','RightsAccessGate',['can_access','record_access','receipt_for','get_receipt','has_access_receipt','stats']);
+const read=(address,functionName,args=[])=>client.readContract({address,functionName,args,transactionHashVariant:TransactionHashVariant.LATEST_FINAL});
+const [rawTotals,rawStats]=await Promise.all([read(RIGHTS,'totals'),read(GATE,'stats')]);
+const parse=v=>typeof v==='string'?JSON.parse(v):v;
+const totals=parse(rawTotals),stats=parse(rawStats);
+if(!Number.isSafeInteger(totals.assets)||!Number.isSafeInteger(totals.requests))throw Error('Invalid RightsRail totals: '+JSON.stringify(totals));
+if(String(stats?.rights_address||'').toLowerCase()!==RIGHTS.toLowerCase())throw Error('WRONG_GATE_CONSTRUCTOR '+JSON.stringify(stats));
+if(!Number.isSafeInteger(stats.receipts)||stats.receipts<0)throw Error('Invalid gate receipts: '+JSON.stringify(stats));
+console.log('LIVE_PAIR_VERIFIED '+JSON.stringify({chainId:61999,rights:RIGHTS,gate:GATE,totals,stats,latestFinal:true}));
