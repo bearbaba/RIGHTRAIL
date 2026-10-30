@@ -28,6 +28,7 @@ class RightsRail(gl.Contract):
     request_count: u256
     assets: TreeMap[u256, str]
     requests: TreeMap[u256, str]
+    policies: TreeMap[str, str]
 
     def __init__(self):
         self.asset_count = u256(0)
@@ -50,6 +51,7 @@ class RightsRail(gl.Contract):
         _require("http://" not in title.lower(), "invalid title")
         self.asset_count += u256(1)
         asset_id = int(self.asset_count)
+        self.policies[str(asset_id) + ":1"] = policy
         self.assets[u256(asset_id)] = _as_json({
             "id": asset_id, "owner": gl.message.sender_address.as_hex.lower(),
             "title": title, "content_sha256": content_sha256,
@@ -67,6 +69,7 @@ class RightsRail(gl.Contract):
         _require(new_policy != item["policy"], "no change")
         item["policy"] = new_policy
         item["version"] += 1
+        self.policies[str(asset_id) + ":" + str(item["version"])] = new_policy
         self.assets[u256(asset_id)] = _as_json(item)
         return item["version"]
 
@@ -77,6 +80,7 @@ class RightsRail(gl.Contract):
         _require(item["active"], "already retired")
         item["active"] = False
         item["version"] += 1
+        self.policies[str(asset_id) + ":" + str(item["version"])] = item["policy"]
         self.assets[u256(asset_id)] = _as_json(item)
 
     @gl.public.write
@@ -155,6 +159,12 @@ class RightsRail(gl.Contract):
     @gl.public.view
     def get_asset(self, asset_id: int) -> str:
         return _as_json(self._asset(asset_id))
+
+    @gl.public.view
+    def policy_at(self, asset_id: int, version: int) -> str:
+        asset = self._asset(asset_id)
+        _require(version > 0 and version <= asset["version"], "invalid policy version")
+        return self.policies[str(asset_id) + ":" + str(version)]
 
     @gl.public.view
     def get_request(self, request_id: int) -> str:
