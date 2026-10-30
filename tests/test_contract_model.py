@@ -104,6 +104,7 @@ class ContractModelTests(unittest.TestCase):
         self.rail = rights.RightsRail()
         self.rail.assets = {}
         self.rail.requests = {}
+        self.rail.policies = {}
         world[RIGHTS_ADDR] = self.rail
         self.gate = gate_module.RightsAccessGate(RIGHTS_ADDR)
         self.gate.receipts = {}
@@ -124,7 +125,9 @@ class ContractModelTests(unittest.TestCase):
             self.rail.update_policy(self.asset, self.policy + " Extra.")
         msg.sender_address = Address(ISSUER)
         self.assertEqual(self.rail.update_policy(self.asset, self.policy + " Extra."), 2)
-        self.assertEqual(self.rail.get_asset(self.asset) and 2, 2)
+        self.assertEqual(json.loads(self.rail.get_asset(self.asset))["version"], 2)
+        self.assertEqual(self.rail.policy_at(self.asset, 1), self.policy)
+        self.assertEqual(self.rail.policy_at(self.asset, 2), self.policy + " Extra.")
 
     def test_valid_permit_and_single_wallet_receipt(self):
         eq.verdict = "PERMIT"
