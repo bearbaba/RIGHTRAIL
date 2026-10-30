@@ -1,0 +1,18 @@
+name: RIGHTRAIL v2 revocation verification
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [scripts/verify-v2.mjs, .github/workflows/verify-v2.yml]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/verify-v2.mjs
