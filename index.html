@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="theme-color" content="#0c1716"/>
+<meta name="description" content="RIGHTRAIL: intelligent content permissions governed by GenLayer AI consensus and on-chain proof."/>
+<title>RIGHTRAIL — Rights, clearly decided.</title>
+</head><body>
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" href="#explore" aria-label="RIGHTRAIL home"><span class="mark">R<span>✦</span></span><span>RIGHTRAIL<small>Permission network</small></span></a>
+    <span class="side-label">WORKSPACE</span>
+    <nav class="nav" aria-label="Main navigation">
+      <button class="nav-item active" data-page="explore"><span class="ico">◫</span> Explore <span class="arr">↗</span></button>
+      <button class="nav-item" data-page="publish"><span class="ico">＋</span> Publish asset</button>
+      <button class="nav-item" data-page="request"><span class="ico">◇</span> Request permission</button>
+      <button class="nav-item" data-page="access"><span class="ico">▤</span> Access & receipts</button>
+    </nav>
+    <div class="side-end">
+      <div class="network-label"><span class="pulse"></span> BRADBURY PHASE 2 <span>4221</span></div>
+      <p>Rights are conditional.<br/>Trust is verifiable.</p>
+      <a href="https://github.com/bearbaba/RIGHTRAIL" target="_blank" rel="noopener">Open-source repository ↗</a>
+    </div>
+  </aside>
+  <main class="main">
+    <header class="topbar"><div class="breadcrumb"><span>RIGHTRAIL</span><b>/</b><span id="crumb">Explore</span></div><div class="top-actions"><span class="status-pill" id="networkState">Deployment not configured</span><button class="btn btn-quiet" id="walletBtn" type="button">Connect wallet</button></div></header>
+    <div class="content">
+      <div id="notice" class="notice" role="status" aria-live="polite"></div>
+      <section id="explore" class="page">
+        <div class="hero">
+          <div class="eyebrow"><span class="dot"></span> INTELLIGENT RIGHTS INFRASTRUCTURE</div>
+          <h1>Creative rights.<br/><em>Clearly decided.</em></h1>
+          <p>Publish what people can do with your work. Let GenLayer adjudicate requests against signed policies. Release access only when permission is verifiable.</p>
+          <div class="hero-actions"><button class="btn btn-primary" data-jump="publish">Publish an asset <span>↗</span></button><button class="btn btn-outline" data-jump="request">Request permission <span>→</span></button></div>
+          <div class="orbit" aria-hidden="true"><div class="ring r1"></div><div class="ring r2"></div><span class="orbit-core">R</span><span class="orbit-label one">POLICY</span><span class="orbit-label two">CONSENSUS</span><span class="orbit-label three">ACCESS</span></div>
+        </div>
+        <div class="stats">
+          <div><span>Registered assets</span><strong id="assetsCount">—</strong><small>finalized on GenLayer</small></div>
+          <div><span>Permission requests</span><strong id="requestsCount">—</strong><small>independently adjudicated</small></div>
+          <div><span>Access receipts</span><strong id="receiptsCount">—</strong><small>recorded by Consumer Gate</small></div>
+        </div>
+        <div class="two-col">
+          <section class="panel"><div class="panel-head"><div><span class="eyebrow">01 / DISCOVER</span><h2>Inspect an asset</h2></div><span class="live-indicator">READ-ONLY</span></div><p class="muted">Read the publisher, version, immutable content digest and current rights policy directly from finalized chain state.</p>
+            <form id="inspectAsset" class="inline-form"><label class="field grow"><span>ASSET ID</span><input id="inspectAssetId" type="number" min="1" value="1" required/></label><button class="btn btn-outline" type="submit">Inspect →</button></form>
+            <div id="assetResult" class="result-slot">No asset loaded yet.</div>
+          </section>
+          <section class="panel"><div class="panel-head"><div><span class="eyebrow">02 / TRUST MODEL</span><h2>A decision that matters</h2></div></div>
+            <div class="step-row"><span class="step-glyph">01</span><div><b>Creator sets the policy</b><p>Wallet-bound, versioned, visible on-chain.</p></div></div>
+            <div class="step-row"><span class="step-glyph">02</span><div><b>GenLayer reaches consensus</b><p>Independent validators assess requested use against the exact policy.</p></div></div>
+            <div class="step-row"><span class="step-glyph">03</span><div><b>Access Gate enforces it</b><p>No matching permit and receipt? No protected resource.</p></div></div>
+          </section>
+        </div>
+      </section>
+      <section id="publish" class="page" hidden>
+        <div class="page-intro"><span class="eyebrow">CREATOR STUDIO / 01</span><h1>Make your terms clear.</h1><p>Publish a rights policy as a signed, versioned on-chain commitment. You are asserting control of the asset, not receiving a legal ownership certificate.</p></div>
+        <div class="two-col form-layout">
+          <section class="panel"><h2>New asset policy</h2><form id="publishForm">
+            <label class="field"><span>ASSET NAME</span><input id="assetTitle" minlength="3" maxlength="90" placeholder="e.g. Aurora creator toolkit" required/></label>
+            <label class="field"><span>CONTENT SHA-256 (LOWERCASE)</span><input id="contentDigest" maxlength="64" pattern="[0-9a-f]{64}" placeholder="64-character digest of the protected bytes" required/><small>Only a digest is committed to GenLayer. Never publish private content in a policy.</small></label>
+            <label class="field"><span>USAGE POLICY</span><textarea id="assetPolicy" rows="7" minlength="48" maxlength="1600" required placeholder="Define allowed, denied, attribution and ambiguous uses..."></textarea></label>
+            <div class="form-actions"><button class="btn btn-primary" type="submit">Review & sign policy <span>↗</span></button><button class="btn btn-outline" type="button" id="examplePolicy">Insert sample policy</button></div>
+          </form></section>
+          <section class="panel helper"><span class="eyebrow">POLICY DESIGN</span><h2>Be specific, not legalistic.</h2><p class="muted">Define the uses you allow, the uses you refuse and the conditions for attribution. Unclear requests stay unresolved.</p><div class="hint"><b>Allowed</b><p>Non-commercial education with visible credit.</p></div><div class="hint"><b>Denied</b><p>Paid advertising, resale and model training.</p></div><div class="hint"><b>Review</b><p>Sponsored education or missing attribution details.</p></div><div class="warning-note">Publishing requires the creator wallet, Bradbury test GEN and verified contract addresses. Until deployment, the editor is a local draft only.</div></section>
+        </div>
+      </section>
+      <section id="request" class="page" hidden>
+        <div class="page-intro"><span class="eyebrow">REQUEST RIGHTS / 02</span><h1>Ask before you use.</h1><p>Describe the specific use. The signed request becomes the subject of an independent GenLayer consensus decision.</p></div>
+        <div class="two-col form-layout"><section class="panel"><h2>New permission request</h2>
+          <form id="requestForm"><label class="field"><span>ASSET ID</span><input id="requestAssetId" type="number" min="1" placeholder="Asset number" required/></label>
+          <label class="field"><span>INTENDED USE</span><textarea id="usageText" rows="6" minlength="32" maxlength="1200" required placeholder="What content, channel, audience, distribution, sponsorship and AI processing will be involved?"></textarea></label>
+          <label class="field"><span>ATTRIBUTION PLAN</span><input id="attributionText" minlength="3" maxlength="300" required placeholder="e.g. Link to creator and show credits in the first paragraph"/></label>
+          <button class="btn btn-primary" type="submit">Sign usage request <span>↗</span></button></form>
+          </section><section class="panel"><div class="panel-head"><div><span class="eyebrow">CONSENSUS</span><h2>Adjudicate an existing request</h2></div></div>
+          <p class="muted">Any participant may trigger adjudication. Independent GenLayer validators assess a frozen policy version and the request. Ambiguity does not grant access.</p>
+          <form id="adjudicateForm" class="inline-form"><label class="field grow"><span>REQUEST ID</span><input id="decisionRequestId" type="number" min="1" required/></label><button class="btn btn-outline" type="submit">Sign review →</button></form>
+          <div class="warning-note">An accepted transaction is not sufficient: the app requires successful execution and the persisted verdict.</div>
+          </section></div>
+      </section>
+      <section id="access" class="page" hidden>
+        <div class="page-intro"><span class="eyebrow">VERIFY & ACCESS / 03</span><h1>Permission you can prove.</h1><p>Inspect the current verdict, sign a one-time Gate receipt and unlock an asset through a wallet-bound verification challenge.</p></div>
+        <div class="two-col form-layout"><section class="panel"><h2>Permission status</h2><form id="lookupRequestForm" class="inline-form"><label class="field grow"><span>REQUEST ID</span><input id="lookupRequestId" type="number" min="1" placeholder="Request number" required/></label><button class="btn btn-outline" type="submit">Check status →</button></form><div id="requestResult" class="result-slot">Enter a request ID to inspect a verdict.</div>
+          </section><section class="panel"><h2>Access gateway</h2><p class="muted">A permit is valid only for the original requester and the currently active policy version. A Gate receipt alone cannot override revoked permission.</p>
+           <form id="accessForm"><label class="field"><span>REQUEST ID</span><input id="gateRequestId" type="number" min="1" required/></label><label class="field"><span>ACTION REFERENCE</span><input id="actionKey" maxlength="80" minlength="4" placeholder="e.g. use-article-2026-001" required/></label><button class="btn btn-primary" type="submit">Sign access receipt <span>↗</span></button></form>
+           <button class="btn btn-outline full" id="unlockBtn">Verify wallet & unlock protected content →</button>
+           <div id="unlockResult" class="result-slot">Protected resources require a configured content gateway and valid on-chain receipt.</div>
+          </section></div>
+      </section>
+      <footer><span>RIGHTRAIL © 2026 · Experimental Bradbury Testnet build</span><span><a href="https://docs.genlayer.com/developers/networks" target="_blank" rel="noopener">Network docs ↗</a> · <a href="https://github.com/bearbaba/RIGHTRAIL" target="_blank" rel="noopener">Source ↗</a></span></footer>
+    </div>
+  </main>
+  <aside class="activity"><div class="activity-head"><span class="eyebrow">TRANSACTION ACTIVITY</span><button id="clearTx" class="mini" type="button">Dismiss</button></div><div class="tx-graphic"><div class="tx-ring"><span>↗</span></div></div><h3 id="txHeading">Ready when you are.</h3><p id="txInfo">Wallet actions will appear here with their real hash and execution status.</p><div class="tx-steps"><div id="s1">01 — Wallet signature</div><div id="s2">02 — GenLayer consensus</div><div id="s3">03 — State verification</div></div><a id="txExplorer" target="_blank" rel="noopener" hidden>Open transaction in Explorer ↗</a><button id="recheckTx" class="btn btn-outline full" hidden>Recheck existing transaction</button><div class="activity-bottom"><span class="pulse"></span> Signed transactions only · no simulated success</div></aside>
+</div><script type="module" src="/src/main.js"></script>
+</body></html>
