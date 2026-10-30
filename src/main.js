@@ -143,7 +143,7 @@ async function loadTotals(){
     $('receiptsCount').textContent=g.receipts;
   }catch(e){notify('Finalized counts unavailable: '+e.message,'error')}
 }
-function infoRow(label,value){return '<div class="step-row"><span class="step-glyph">✓</span><div><b>'+escape(label)+'</b><p>'+escape(value)+'</p></div></div>'}
+function infoRow(label,value,tone='normal'){const glyph=tone==='denied'?'×':tone==='neutral'?'•':'✓';return '<div class="step-row '+(tone==='denied'?'step-denied':tone==='neutral'?'step-neutral':'')+'"><span class="step-glyph">'+glyph+'</span><div><b>'+escape(label)+'</b><p>'+escape(value)+'</p></div></div>'}
 async function inspectAsset(id) {
   checkReady();
   const data=parse(await api('asset',{id}));
@@ -332,17 +332,28 @@ async function lookupRequest(requestId){
   const record=parse(await api('request',{id:requestId}));
   const asset=parse(await api('asset',{id:record.asset_id}));
   const identity=requesterWalletStatus(record.requester,account);
-  const allowed=Boolean(identity.match && await api('permit',{id:requestId,actor:account}));
+  const stale=record.policy_version!==asset.version;
+  const allowed=Boolean(identity.match&&await api('permit',{id:requestId,actor:account}));
   const receipt=identity.match ? await api('receipt',{id:requestId,actor:account}) : '';
-  $('requestResult').innerHTML='<span class="badge '+(record.decision==='DENY'?'bad':record.decision!=='PERMIT'?'warn':'')+'">'+escape(record.decision)+'</span>'+
+  const historicalPermit=record.decision==='PERMIT'&&stale;
+  const currentDenied=stale||record.decision==='DENY'||record.decision==='REVIEW';
+  const badge=historicalPermit?'HISTORICAL PERMIT · REVOKED':record.decision;
+  const badgeColor=historicalPermit||record.decision==='DENY'?'bad':record.decision!=='PERMIT'?'warn':'';
+  let note='';
+  if(stale){
+    note='<p class="revoke-note" role="status"><b>ACCESS REVOKED</b> — Request policy v'+escape(record.policy_version)+' is older than asset policy v'+escape(asset.version)+'. Historical PERMIT and receipt remain stored, but the current access check is denied.</p>';
+  }else if(currentDenied){
+    note='<p class="revoke-note" role="status"><b>ACCESS NOT GRANTED</b> — The AI decision is '+escape(record.decision)+'. No access receipt can override this result.</p>';
+  }
+  $('requestResult').innerHTML='<span class="badge '+badgeColor+'">'+escape(badge)+'</span>'+note+
     '<p class="'+(identity.match?'wallet-matched':'wallet-mismatch')+'">'+escape(identity.reason)+'</p>'+
     infoRow('Asset',' #'+record.asset_id+' · '+asset.title)+
     infoRow('Requester (rights holder)',record.requester)+
     infoRow('Your connected wallet',account||'None')+
-    infoRow('Policy snapshot','v'+record.policy_version+' · current v'+asset.version)+
+    infoRow('Policy snapshot','v'+record.policy_version+' · current v'+asset.version,stale?'denied':'normal')+
     infoRow('Usage',record.usage)+infoRow('Attribution',record.attribution)+
-    infoRow('Wallet permit',allowed?'VALID for connected wallet':identity.match?'NOT GRANTED by current policy':'NOT CHECKED — connect the original Requester')+
-    infoRow('Access receipt',receipt?JSON.stringify(parse(receipt)):identity.match?'No matching receipt for connected wallet':'Receipt belongs to Requester, not the connected wallet');
+    infoRow('Wallet permit',allowed?'VALID for connected wallet':stale?'REVOKED — POLICY VERSION CHANGED':identity.match?'NOT GRANTED by current policy':'NOT CHECKED — connect the original Requester',allowed?'normal':'denied')+
+    infoRow('Access receipt',receipt?(stale?'ARCHIVED / NOT VALID FOR ACCESS · ':'')+JSON.stringify(parse(receipt)):identity.match?'No matching receipt for connected wallet':'Receipt belongs to Requester, not the connected wallet',receipt&&allowed?'normal':'neutral');
   $('gateRequestId').value=requestId;
   const signBtn=$('accessForm').querySelector('button[type="submit"]');
   signBtn.disabled=!identity.match||Boolean(receipt)||!allowed;
@@ -384,8 +395,13 @@ $('unlockBtn').onclick=async()=>{
     const accounts=await window.ethereum.request({method:'eth_accounts'});
     if(!Array.isArray(accounts) || !accounts.some(a=>String(a).toLowerCase()===account.toLowerCase()))
       throw new Error('The active wallet account changed. Disconnect and reconnect the requester wallet.');
+    const asset=parse(await api('asset',{id:request.asset_id}));
+    if(request.policy_version!==asset.version)
+      throw new Error('ACCESS REVOKED: Request policy v'+request.policy_version+' was replaced by v'+asset.version+'. The historical receipt cannot unlock content. No wallet signature is needed.');
+    if(request.decision!=='PERMIT')
+      throw new Error('ACCESS NOT GRANTED: Decision '+request.decision+' does not allow content unlock. No wallet signature is needed.');
     const status=await api('hasReceipt',{id:requestId,actor:account});
-    if(status!==true) throw new Error('No current on-chain permit and matching access receipt. Unlock denied.');
+    if(status!==true) throw new Error('ACCESS NOT GRANTED: No current on-chain permit and active access receipt. No wallet signature was requested.');
     if(!config.protectedContentConfigured) throw new Error('Protected content is not provisioned on this server.');
     const arr=new Uint8Array(16);crypto.getRandomValues(arr);
     const nonce=Array.from(arr,v=>v.toString(16).padStart(2,'0')).join('');
