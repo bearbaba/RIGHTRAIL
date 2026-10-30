@@ -1,0 +1,18 @@
+name: Bradbury GenVM deploy preflight (unsigned)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    name: Verify RPC genesis and both contract ABIs — NO SIGNING
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout RIGHTRAIL source
+        uses: actions/checkout@v4
+      - name: Inspect Bradbury Phase 2 network and validate both contract schemas
+        run: python3 scripts/preflight_bradbury.py
+      - name: Confirm no transaction is created
+        if: always()
+        run: echo 'This workflow contains only read-only JSON-RPC queries. It cannot sign or deploy.'
