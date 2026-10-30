@@ -1,11 +1,11 @@
 name: RIGHTRAIL Gate deployment readback
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'scripts/verify_gate_deployment.mjs'
-      - '.github/workflows/verify-gate-deployment.yml'
   workflow_dispatch:
+    inputs:
+      tx_hash:
+        description: Exact RightsAccessGate deploy transaction hash (NOT RightsRail)
+        type: string
+        required: true
 permissions:
   contents: read
 jobs:
@@ -18,5 +18,7 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-audit --no-fund
-      - name: Read transaction, verify RightsAccessGate source and linked RightsRail
+      - name: Verify deployed Gate source, constructor and latest-final stats without signing
+        env:
+          RIGHTRAIL_GATE_TX_HASH: ${{ inputs.tx_hash }}
         run: node scripts/verify_gate_deployment.mjs

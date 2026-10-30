@@ -9,7 +9,7 @@
 
 ## Evidence and attribution
 
-The user supplied an image of the Studio **Run and Debug** panel for `RIGHTRAIL.py`: `Deployed at 0xef...464b`, transaction `ACCEPTED` and `Contract deployed` in GenVM log. The screenshot did not expose the full deploy transaction hash or finality detail.
+The user supplied an image of the Studio **Run and Debug** panel for `RIGHTRAIL.py`: `Deployed at 0xef...464b`, transaction `ACCEPTED` and `Contract deployed` in GenVM log. The full RightsRail deployment hash was later provided and independently read via Studionet: `0x6a9020c45ba101535d675022063545854ef289a32f5e83a7b530b51d31f11011`. Transaction status FINALIZED, execution SUCCESS, consensus Accepted. The deployed contract address from transaction `data.contract_address` is the same RightsRail address above. **This hash is NOT a deployment of RightsAccessGate.**
 
 An independent unsigned CI job (using `genlayer-stable` / Studionet RPC) fetched the *deployed* contract source via `getContractCode`, parsed live schema via `getContractSchema`, then read `totals()` using `TransactionHashVariant.LATEST_FINAL`. This verified that the contract exists and finalized state is readable:
 

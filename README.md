@@ -4,7 +4,7 @@
 
 RIGHTRAIL is a separate GenLayer dApp where a creator publishes a content SHA-256 and a versioned policy, another wallet signs a use request, AI consensus adjudicates PERMIT / DENY / REVIEW, and a separate RightsAccessGate enforces a final permit with one wallet-bound on-chain receipt. Updating the creator policy invalidates old permissions and receipts.
 
-**Network target:** stable GenLayer **Studionet chain 61999**. **Deployment status: RightsRail on Studionet is verified by independent latest-final readback; RightsAccessGate is NOT YET DEPLOYED.** Source, frontend and backend migrated from Bradbury's release-candidate SDK to the same stable SDK used by RELYNX Console: `genlayer-stable` = `genlayer-js@1.1.8`.
+**Network target:** stable GenLayer **Studionet chain 61999**. **Deployment status: RightsRail on Studionet is verified by independent latest-final readback; RightsAccessGate is NOT YET DEPLOYED.** RightsRail deployment TX: [`0x6a9020…f11011`](https://explorer-studio.genlayer.com/tx/0x6a9020c45ba101535d675022063545854ef289a32f5e83a7b530b51d31f11011). Do **not** treat this as the Gate TX. Source, frontend and backend migrated from Bradbury's release-candidate SDK to the same stable SDK used by RELYNX Console: `genlayer-stable` = `genlayer-js@1.1.8`.
 
 - Website: https://rightrail.vercel.app/
 - Repository: https://github.com/bearbaba/RIGHTRAIL
