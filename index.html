@@ -55,6 +55,7 @@
         <div class="two-col form-layout">
           <section class="panel"><h2>New asset policy</h2><form id="publishForm">
             <label class="field"><span>ASSET NAME</span><input id="assetTitle" minlength="3" maxlength="90" placeholder="e.g. Aurora creator toolkit" required/></label>
+            <label class="field"><span>LOCAL FILE (HASHED IN YOUR BROWSER — NOT UPLOADED)</span><input id="contentFile" type="file" aria-label="Select local file to calculate SHA-256"/><small>Choose your own file to compute its digest locally. This preview does not store or upload it.</small></label>
             <label class="field"><span>CONTENT SHA-256 (LOWERCASE)</span><input id="contentDigest" maxlength="64" pattern="[0-9a-f]{64}" placeholder="64-character digest of the protected bytes" required/><small>Only a digest is committed to GenLayer. Never publish private content in a policy.</small></label>
             <label class="field"><span>USAGE POLICY</span><textarea id="assetPolicy" rows="7" minlength="48" maxlength="1600" required placeholder="Define allowed, denied, attribution and ambiguous uses..."></textarea></label>
             <div class="form-actions"><button class="btn btn-primary" type="submit">Review & sign policy <span>↗</span></button><button class="btn btn-outline" type="button" id="examplePolicy">Insert sample policy</button></div>
