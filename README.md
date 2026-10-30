@@ -4,7 +4,7 @@
 
 RIGHTRAIL is a new GenLayer project for creators, communities and AI-agent developers. It lets a wallet publish an immutable content digest and versioned natural-language usage policy; requesters sign a precise use case; GenLayer AI validators independently adjudicate the request; and a separate access gate enforces the final decision by writing a wallet-bound receipt.
 
-**Stage:** Bradbury Phase 2 **builder preview**. Frontend, contracts and API source are pushed; deployment/build CI is connected. **Neither contract is yet confirmed as deployed on Bradbury**. The web app must not claim on-chain success or release protected content until configured and independently verified. Do not submit to GenLayer Projects as a completed live contract app at this stage.
+**Stage:** Bradbury Phase 2 **builder preview — DEPLOYMENT BLOCKED by unsigned GenVM schema preflight (30 Oct 2026)**. Frontend, contracts and API source are pushed; deployment/build CI is connected. **Neither contract has been deployed on Bradbury**. The Node RPC verifies Phase 2 genesis but rejects both contract schemas and the official minimal contract sample with `VMError: invalid_contract runner malformed`. Do **not** spend test GEN deploying until `python scripts/preflight_bradbury.py` passes. See [current blocking evidence and safe deploy runbook](docs/BRADBURY_DEPLOYMENT.md). The web app must not claim on-chain success or release protected content until configured and independently verified. Do not submit to GenLayer Projects as a completed live contract app at this stage.
 
 - **App:** https://rightrail.vercel.app/
 - **Source:** https://github.com/bearbaba/RIGHTRAIL
