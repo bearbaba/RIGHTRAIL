@@ -5,7 +5,7 @@ const RPC='https://studio.genlayer.com/api';
 const configuredRpc=process.env.RIGHTRAIL_NODE_RPC||RPC;
 const RIGHTS=process.env.RIGHTRAIL_RIGHTS_ADDRESS||'',GATE=process.env.RIGHTRAIL_GATE_ADDRESS||'';
 const addr=v=>/^0x[0-9a-fA-F]{40}$/.test(v||'');
-const positive=v=>/^[1-9]\\d{0,7}$/.test(String(v??''))&&Number(v)<=100000000;
+import { validPositiveId } from '../lib/api-inputs.js';
 const hash=v=>/^0x[0-9a-fA-F]{64}$/.test(v||'');
 const ready=()=>configuredRpc===RPC&&addr(RIGHTS)&&addr(GATE);
 const client=createClient({chain:studionet});
@@ -34,12 +34,12 @@ export default async function handler(req,res){
   if(!(await verifyNetwork()))return fail(503,'Studionet RPC not verified');
   let value;const n=Number(req.query.id);
   if(op==='totals')value={rights:await read(RIGHTS,'totals'),gate:await read(GATE,'stats')};
-  else if(op==='asset'&&positive(req.query.id))value=await read(RIGHTS,'get_asset',[n]);
-  else if(op==='request'&&positive(req.query.id))value=await read(RIGHTS,'get_request',[n]);
-  else if(op==='permit'&&positive(req.query.id)&&addr(req.query.actor))value=await read(RIGHTS,'permit_status',[n,req.query.actor]);
-  else if(op==='gate'&&positive(req.query.id)&&addr(req.query.actor))value=await read(GATE,'can_access',[n,req.query.actor]);
-  else if(op==='receipt'&&positive(req.query.id)&&addr(req.query.actor))value=await read(GATE,'receipt_for',[n,req.query.actor]);
-  else if(op==='hasReceipt'&&positive(req.query.id)&&addr(req.query.actor))value=await read(GATE,'has_access_receipt',[n,req.query.actor]);
+  else if(op==='asset'&&validPositiveId(req.query.id))value=await read(RIGHTS,'get_asset',[n]);
+  else if(op==='request'&&validPositiveId(req.query.id))value=await read(RIGHTS,'get_request',[n]);
+  else if(op==='permit'&&validPositiveId(req.query.id)&&addr(req.query.actor))value=await read(RIGHTS,'permit_status',[n,req.query.actor]);
+  else if(op==='gate'&&validPositiveId(req.query.id)&&addr(req.query.actor))value=await read(GATE,'can_access',[n,req.query.actor]);
+  else if(op==='receipt'&&validPositiveId(req.query.id)&&addr(req.query.actor))value=await read(GATE,'receipt_for',[n,req.query.actor]);
+  else if(op==='hasReceipt'&&validPositiveId(req.query.id)&&addr(req.query.actor))value=await read(GATE,'has_access_receipt',[n,req.query.actor]);
   else if(op==='tx'&&hash(req.query.hash)){
     const t=await client.getTransaction({hash:req.query.hash});
     if(!t)return res.status(200).json({ok:true,value:{found:false}});

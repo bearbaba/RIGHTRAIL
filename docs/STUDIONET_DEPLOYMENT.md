@@ -2,7 +2,7 @@
 
 Studio: https://studio.genlayer.com · RPC: https://studio.genlayer.com/api · Explorer: https://explorer-studio.genlayer.com
 
-**Status: RightsRail deployed and independently read on latest-final Studionet state; RightsAccessGate still needs deployment.** The new RC network failure is documented in [the schema blocker report](GENVM_SCHEMA_BLOCKER_2026-10-30.md). Porting to Studionet does not prove the contract will deploy. The two Python contracts use the stable legacy runner; their unparameterized `TreeMap()` assignments were removed because typed storage maps are zero-initialized.
+**Status: BOTH RightsRail and RightsAccessGate deployed, with their published sources and constructor link verified on-chain.** The new RC network failure is documented in [the schema blocker report](GENVM_SCHEMA_BLOCKER_2026-10-30.md). Porting to Studionet does not prove the contract will deploy. The two Python contracts use the stable legacy runner; their unparameterized `TreeMap()` assignments were removed because typed storage maps are zero-initialized.
 
 ## Read-only checks before signatures
 
@@ -19,10 +19,10 @@ Require BOTH schema checks to pass. In Studio 61999, inspect `rights_rail.py` an
 
 ## Deploy with the user's wallet (no private keys in chat)
 
-1. **DONE, do not redeploy:** RightsRail at `0xef37288aB08A30697841C4fFe93C1D71E23C464b`. Latest-final `totals()` returned `{"assets":0,"requests":0}`, deployed schema verified. See [live verification](STUDIONET_LIVE_EVIDENCE.md). The deployment TX hash was not captured in the supplied screenshot; verify it in Explorer before final video/submission.
-2. **NEXT:** Deploy `contracts/access_gate.py`, passing verified RightsRail address **`0xef37288aB08A30697841C4fFe93C1D71E23C464b`** as the string constructor `rights_contract`. Check FINALIZED and GenVM SUCCESS; `stats().rights_address` must match.
-3. Configure Vercel project `rightrail` with `RIGHTRAIL_RIGHTS_ADDRESS` and `RIGHTRAIL_GATE_ADDRESS`. Delete a stale `RIGHTRAIL_NODE_RPC` or set it to exact `https://studio.genlayer.com/api`. Never reuse Bradbury addresses.
-4. Redeploy Vercel and confirm `/api/state?op=config` returns `configured:true`, `studionetVerified:true`, `chainId:61999`. Verify real `totals` reads.
+1. **DONE, do not redeploy:** RightsRail at `0xef37288aB08A30697841C4fFe93C1D71E23C464b`. Latest-final `totals()` returned `{"assets":0,"requests":0}`, deployed schema verified. See [live verification](STUDIONET_LIVE_EVIDENCE.md). RightsRail deployment TX `0x6a9020c45ba101535d675022063545854ef289a32f5e83a7b530b51d31f11011` was subsequently verified.
+2. **DONE, do not redeploy:** RightsAccessGate at `0xCA57aF8cEe6d83029700A859cBaf93506839364E`, its latest-final `stats()` confirms the constructor references RightsRail and current receipt count 0. [Independent live pair audit](https://github.com/bearbaba/RIGHTRAIL/actions/runs/41051709427). Preserve full Gate deploy TX hash from Studio's transaction detail before final submission.
+3. **DONE:** Configured Vercel project `rightrail` with both verified addresses and the exact RPC `https://studio.genlayer.com/api`. Never reuse Bradbury addresses.
+4. Redeploy Vercel after environment changes and confirm `/api/state?op=config` returns `configured:true`, `studionetVerified:true`, `chainId:61999`. Verify real `totals` reads.
 5. Only if using the optional private-content pilot, set server-only `RIGHTRAIL_CONTENT_ASSET_ID` and `RIGHTRAIL_CONTENT_TEXT` with SHA-256 equal to the registered content digest.
 
 ## Single-video final acceptance

@@ -38,3 +38,34 @@ The deployed source exposes `adjudicate`, `get_asset`, `get_request`, `permit_st
 3. Perform actual signed app transactions: publish, request, AI adjudication (PERMIT / DENY / REVIEW), allow/block cross-contract Gate, durable receipt, duplicate and wrong-wallet rejection, policy invalidation, pilot protected-content unlock when provisioned. Preserve exact transaction hashes and readbacks before claiming a completed GenLayer Project.
 
 RELYNX Console and its pending steward-requested changes are unrelated and must not be resubmitted as part of this project.
+
+
+## Verified second deployment — RightsAccessGate (2026-10-30)
+
+**Access Gate address:** `0xCA57aF8cEe6d83029700A859cBaf93506839364E`  
+**Studio:** https://studio.genlayer.com/?import-contract=0xCA57aF8cEe6d83029700A859cBaf93506839364E  
+**Explorer:** https://explorer-studio.genlayer.com/address/0xCA57aF8cEe6d83029700A859cBaf93506839364E  
+**Reproducible audit:** `node scripts/verify_live_pair.mjs`  
+**CI result:** https://github.com/bearbaba/RIGHTRAIL/actions/runs/41051709427
+
+The user supplied a Studio screenshot of deployed `RightsAccessGate`, with FINALIZED deployment transaction in the UI and public methods `can_access`, `get_receipt`, `has_access_receipt`, `receipt_for`, `stats` and `record_access`. The exact Gate deploy TX hash was not supplied as text and must be retrieved from Explorer before final reviewer evidence.
+
+Independent RPC verification fetched both deployed code blobs via `getContractCode`, inspected deployed schemas, and read `RightsRail.totals()` and `RightsAccessGate.stats()` using `LATEST_FINAL`:
+
+```json
+{
+  "chainId": 61999,
+  "rights": "0xef37288aB08A30697841C4fFe93C1D71E23C464b",
+  "gate": "0xCA57aF8cEe6d83029700A859cBaf93506839364E",
+  "totals": {"assets": 0, "requests": 0},
+  "stats": {
+    "receipts": 0,
+    "rights_address": "0xef37288aB08A30697841C4fFe93C1D71E23C464b"
+  },
+  "latestFinal": true
+}
+```
+
+**Source matching:** both contract files match their deployed sources after normalization, not byte-for-byte. Gate deployed code SHA-256: `3128ad6c17038c749678455296ec14f586d6af76d3f5f1101879fa065e2c7ecc`. Repo Gate SHA-256: `09f1814f40d4c4d2cd361d458ecf2de0dd49be8767bdc9805b48de6b7bfc1a18`. These differing hashes reflect line ending/trailing newline differences and must not be described as exact byte equivalence.
+
+**Next:** verify Production config and read-only totals, then carry out user-wallet signed publish/request/AI adjudication/Gate receipt/policy invalidation tests. There are **no persisted AI decisions or access receipts yet**, and the project must not be submitted as an end-to-end verified application until those are demonstrated.
