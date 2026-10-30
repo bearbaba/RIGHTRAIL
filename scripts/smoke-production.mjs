@@ -14,7 +14,7 @@ for(let attempt=0;attempt<16;attempt++){
   const c=await get('/api/state?op=config');
   const body=c.json;
   if(c.status!==200||!body?.ok||!body.configured||!body.studionetVerified||body.chainId!==61999||
-     body.rights?.toLowerCase()!==RIGHTS.toLowerCase()||body.gate?.toLowerCase()!==GATE.toLowerCase())
+     body.rights?.toLowerCase()!==RIGHTS.toLowerCase()||body.gate?.toLowerCase()!==GATE.toLowerCase()||body.protectedContentConfigured!==true)
     throw Error('Production not ready or config invalid: '+JSON.stringify(c));
   const total=await get('/api/state?op=totals');
   if(total.status!==200||!total.json?.ok)throw Error('Totals unavailable: '+JSON.stringify(total));
@@ -27,6 +27,8 @@ for(let attempt=0;attempt<16;attempt++){
   if(invalid.status!==400||invalid.json?.ok!==false)throw Error('Noncanonical ID accepted: '+JSON.stringify(invalid));
   const unsafe=await get('/api/state?op=hasReceipt&id=1e3&actor='+ACTOR);
   if(unsafe.status!==400||unsafe.json?.ok!==false)throw Error('Scientific ID accepted: '+JSON.stringify(unsafe));
+  const unauthed=await fetch(BASE+'/api/unlock',{method:'POST',headers:{'content-type':'application/json'},body:'{}',signal:AbortSignal.timeout(15000)});
+  if(unauthed.status!==401)throw Error('Unauthenticated pilot unlock should be denied with 401, got '+unauthed.status);
   console.log('PRODUCTION_SMOKE_PASS '+JSON.stringify({url:BASE,chainId:61999,configured:true,rights:RIGHTS,gate:GATE,totals:{rights,gate},validIdStatus:id.status,invalidIdStatus:invalid.status}));
   good=true;break;
  }catch(e){
