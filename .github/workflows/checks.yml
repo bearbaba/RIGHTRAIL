@@ -19,3 +19,5 @@ jobs:
         run: npm run build
       - name: Check Python contract syntax
         run: python3 -m py_compile contracts/*.py
+      - name: Check deterministic contract-model invariants (not GenVM)
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
