@@ -63,6 +63,19 @@
           </form></section>
           <section class="panel helper"><span class="eyebrow">POLICY DESIGN</span><h2>Be specific, not legalistic.</h2><p class="muted">Define the uses you allow, the uses you refuse and the conditions for attribution. Unclear requests stay unresolved.</p><div class="hint"><b>Allowed</b><p>Non-commercial education with visible credit.</p></div><div class="hint"><b>Denied</b><p>Paid advertising, resale and model training.</p></div><div class="hint"><b>Review</b><p>Sponsored education or missing attribution details.</p></div><div class="warning-note">Publishing requires the creator wallet, Studionet test GEN and verified contract addresses. Until deployment, the editor is a local draft only.</div></section>
         </div>
+        <section class="panel video-policy-panel">
+          <div class="panel-head"><div><span class="eyebrow">CREATOR / EXISTING ASSET</span><h2>Update asset policy</h2></div></div>
+          <p class="muted">Only the original creator may sign a versioned policy update. It applies to this asset; old requests and receipts remain recorded but cannot grant current access.</p>
+          <form id="updatePolicyForm">
+            <label class="field"><span>ASSET ID</span><input id="updateAssetId" type="number" min="1" value="1" required/></label>
+            <label class="field"><span>NEW POLICY</span><textarea id="updatePolicyText" rows="5" minlength="48" maxlength="1600" placeholder="Full replacement policy…" required></textarea></label>
+            <div class="form-actions">
+              <button type="button" class="btn btn-outline" id="videoPolicy">Load educational access policy</button>
+              <button type="submit" class="btn btn-primary">Sign policy update ↗</button>
+            </div>
+          </form>
+          <div id="updatePolicyResult" class="result-slot" role="status">No policy update submitted. Asset #1 remains unchanged until a signed transaction finalizes.</div>
+        </section>
       </section>
       <section id="request" class="page" hidden>
         <div class="page-intro"><span class="eyebrow">REQUEST RIGHTS / 02</span><h1>Ask before you use.</h1><p>Describe the specific use. The signed request becomes the subject of an independent GenLayer consensus decision.</p></div>

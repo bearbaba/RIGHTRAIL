@@ -1,6 +1,7 @@
 import './style.css';
 import { encodePersonalSignMessage, walletSignatureIssue } from '../lib/unlock-wallet.js';
 import { requesterWalletStatus } from '../lib/requester-wallet.js';
+import { preparePolicyUpdate, confirmPolicyUpdate } from '../lib/policy-update.js';
 import { createClient } from 'genlayer-stable';
 import { studionet } from 'genlayer-stable/chains';
 
@@ -192,6 +193,14 @@ async function verifyRecord(record){
       }
     }
   }
+  if(functionName==='update_policy'){
+    const asset=parse(await api('asset',{id:args[0]}));
+    if(confirmPolicyUpdate(asset,actor,args[1],record.verification?.priorVersion)){
+      $('inspectAssetId').value=args[0];
+      $('updatePolicyResult').textContent='FINALIZED / SUCCESS · Asset #'+args[0]+' is now policy v'+asset.version+'.';
+      return {id:args[0],message:'Policy v'+asset.version+' verified in finalized state'};
+    }
+  }
   if(functionName==='request_usage'){
     const totals=parse((await api('totals')).rights);
     const limit=Math.min(12,totals.requests);
@@ -239,6 +248,10 @@ async function followTransaction(record){
                 clearRecord();setActivity('FINALIZED / SUCCESS',verified.message,'success',3,hash);
                 notify(verified.message,'ok');setBusy(false);loadTotals();
                 if(record.functionName==='publish_asset')showPage('explore');
+                if(record.functionName==='update_policy'){
+                  showPage('publish');
+                  try{await inspectAsset(record.args[0])}catch(error){notify('Policy updated; recheck Asset #'+record.args[0]+': '+error.message,'info')}
+                }
                 if(record.functionName==='request_usage')showPage('request');
                 if(record.functionName==='adjudicate'){
                   showPage('access');
@@ -262,7 +275,7 @@ async function followTransaction(record){
     'unknown',2,hash);
   setBusy(false);
 }
-async function signWrite(address,functionName,args){
+async function signWrite(address,functionName,args,verification={}){
   if(writeRecord())throw new Error('An existing signed transaction needs rechecking before you can send another.');
   const client=await signer();
   setBusy(true);
@@ -270,7 +283,7 @@ async function signWrite(address,functionName,args){
   try{
     const hash=await client.writeContract({address,functionName,args,value:0n});
     if(!/^0x[0-9a-fA-F]{64}$/.test(hash||''))throw new Error('Wallet did not return a valid transaction hash.');
-    const record={hash,functionName,args,actor:account,address,created:Date.now()};
+    const record={hash,functionName,args,actor:account,address,verification,created:Date.now()};
     keepRecord(record);
     setBusy(false);
     await followTransaction(record);
@@ -287,6 +300,27 @@ $('publishForm').onsubmit=async e=>{
   saveLocalDraft();
   if(!config?.configured)return notify('Draft saved only in this browser. Studionet contracts are not deployed/configured; no signature was requested.','info');
   try{await signWrite(config.rights,'publish_asset',[title,hash,policy])}catch(err){notify(err.message,'error')}
+};
+$('videoPolicy').onclick=()=>{
+  $('updateAssetId').value='1';
+  $('updatePolicyText').value=PILOT_POLICY;
+  $('updatePolicyResult').textContent='Example loaded. Review the full policy, then sign with the original Creator wallet. This does not sign automatically.';
+};
+$('updatePolicyForm').onsubmit=async event=>{
+  event.preventDefault();
+  try{
+    checkReady();
+    if(!account)await connectWallet();
+    if(!account)throw new Error('Connect the Creator wallet to sign this update.');
+    const id=inputId($('updateAssetId').value);
+    const asset=parse(await api('asset',{id}));
+    const update=preparePolicyUpdate(asset,account,$('updatePolicyText').value);
+    $('updatePolicyResult').textContent='Wallet owner verified. Sign update_policy in your wallet; awaiting finalized state.';
+    await signWrite(config.rights,'update_policy',[id,update.policy],{priorVersion:update.priorVersion});
+  }catch(err){
+    $('updatePolicyResult').textContent='Policy update not completed: '+(err.message||String(err));
+    notify(err.message||String(err),'error');
+  }
 };
 const DEMO_REQUESTS={
   permit:{

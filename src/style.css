@@ -11,3 +11,5 @@
 .wallet-identity{margin:0 0 12px;padding:10px 13px;font-size:12px;border:1px solid #334d40;color:#c9e8d8;background:#142723;border-radius:9px;overflow-wrap:anywhere}.wallet-mismatch{margin:12px 0;color:#f3c994;background:#39291d;border:1px solid #9f7245;padding:10px;border-radius:8px;font-size:12px;line-height:1.5;overflow-wrap:anywhere}.wallet-matched{margin:12px 0;color:#b4e8cb;background:#203c2c;border:1px solid #548e69;padding:10px;border-radius:8px;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
 
 .step-row.step-denied .step-glyph{color:#ffc2ae;border-color:#9f5c4e;background:#3d2925}.step-row.step-denied b,.step-row.step-denied p{color:#f6b8ab}.step-row.step-neutral .step-glyph{color:#a9b5b0;border-color:#516159}.revoke-note{margin:12px 0;padding:12px 14px;border:1px solid #925347;border-radius:9px;background:#342421;color:#fac4b5;font-size:12px;line-height:1.65}.revoke-note b{color:#ffd0c0}
+
+.video-policy-panel{margin-top:22px}.video-policy-panel .panel-head{margin-bottom:12px}.video-policy-panel .form-actions{margin-top:12px}.video-policy-panel .result-slot{margin-top:15px}
