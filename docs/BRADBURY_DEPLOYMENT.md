@@ -2,6 +2,45 @@
 
 This is a **future acceptance checklist**, not a claim that a deployment already happened.
 
+## Live preflight status — 30 October 2026
+
+**DEPLOYMENT BLOCKED — do not sign yet.** Two independent Bradbury endpoints return the correct Phase 2 chain ID (4221) and genesis hash. However the GenLayer Node RPC currently reports
+
+\`\`\`text
+gen_getContractSchema -> JSON-RPC -32000:
+VMError: invalid_contract runner malformed
+\`\`\`
+
+for **both RIGHTRAIL sources**, and it also reports the same error for the **exact minimal Base64 contract from GenLayer's official API documentation**. We tested both the older Studionet runner pin and a recent v0.3 Studio-dev pin: neither cleared this error. This does not by itself establish a defect in either RIGHTRAIL source; the node's GenVM/schema path may be unavailable or incompatible. AST lint passed, 15 local/model tests passed, but **full GenVM semantic validation is not yet verified** (the currently released gltest attempts to download an obsolete GenVM asset).
+
+A signed deployment would spend GEN before this uncertainty is resolved. **No RIGHTRAIL contract has been deployed on Bradbury and no deploy transaction hash exists.**
+
+To recheck without funding a wallet or submitting any transaction:
+
+\`\`\`bash
+git clone https://github.com/bearbaba/RIGHTRAIL.git
+cd RIGHTRAIL
+python scripts/preflight_bradbury.py
+\`\`\`
+
+**Proceed only if this prints \`[PASS]\` for both contract schemas.** If it reports \`[BLOCKED]\`, do not try to work around the error by using the Chain RPC, by changing a wallet's chain ID alone, or by signing deployment repeatedly. Verify the supported runner/GenVM runtime against the GenLayer Phase 2 release notes or contact GenLayer DevRel with the reproducible unsigned JSON-RPC result.
+
+After preflight passes, obtain test GEN from the official faucet and use your own wallet (never share a private key). In a local desktop terminal with a web browser:
+
+\`\`\`bash
+npm install -g genlayer@0.40.0-rc.5
+genlayer network set testnet-bradbury
+genlayer network info
+
+# Always explicitly target GenLayer Node RPC for Intelligent Contracts.
+genlayer deploy --contract contracts/rights_rail.py --rpc https://rpc-bradbury.genlayer.com --wallet browser --fee-preset standard
+# Verify FINALIZED + successful execution and read back the new RightsRail address.
+genlayer deploy --contract contracts/access_gate.py --rpc https://rpc-bradbury.genlayer.com --wallet browser --fee-preset standard --args "<VERIFIED_RIGHTSRAIL_ADDRESS>"
+\`\`\`
+
+The CLI's \`--wallet browser\` launches a local browser bridge for the wallet to authorize. This **cannot run headlessly on Vercel**; we tried and the browser opener was absent. The CLI commands above are **not** evidence that the contract is deployed and are subject to the successful schema preflight and network-specific fee/GenVM validation. Deploy RightsRail first, then pass its verified address to Gate. Never automatically retry a transaction whose hash already exists.
+
+
 ## Network facts
 
 - Bradbury Phase 2 **chain ID 4221**. That number is shared with older Bradbury deployments.
