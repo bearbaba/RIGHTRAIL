@@ -1,3 +1,4 @@
+# v0.2.16
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 """RIGHTRAIL Access Gate — consequential, wallet-bound cross-contract receipts.
 
@@ -23,8 +24,6 @@ class RightsAccessGate(gl.Contract):
     def __init__(self, rights_contract: str):
         self.rights_address = Address(rights_contract)
         self.receipt_count = u256(0)
-        self.receipts = TreeMap()
-        self.by_request_actor = TreeMap()
 
     def _key(self, request_id: int, actor: str) -> str:
         _require(request_id > 0, "invalid request")

@@ -1,93 +1,57 @@
-import { createClient } from 'genlayer-js';
-import { testnetBradbury } from 'genlayer-js/chains';
-import { TransactionHashVariant } from 'genlayer-js/types';
-
-// Server-only, allowlisted Bradbury reads. Never submit a write from an API route.
-const GENESIS = '0x17d89764d4f4f963158fc4c5e8f2cb670c2837740b35f37081c12860c3df97e4';
-const address = v => /^0x[0-9a-fA-F]{40}$/.test(v || '');
-const id = v => /^\d{1,8}$/.test(String(v ?? '')) && Number(v) > 0 && Number(v) <= 100000000;
-const txhash = v => /^0x[0-9a-fA-F]{64}$/.test(v || '');
-const RIGHTS = process.env.RIGHTRAIL_RIGHTS_ADDRESS || '';
-const GATE = process.env.RIGHTRAIL_GATE_ADDRESS || '';
-const RPC = process.env.RIGHTRAIL_NODE_RPC || '';
-const configured = () => address(RIGHTS) && address(GATE) && /^https:\/\//.test(RPC);
-
-function reject(res, code, error) {
-  return res.status(code).json({ ok: false, error });
+import {createClient} from 'genlayer-stable';
+import {studionet} from 'genlayer-stable/chains';
+import {TransactionHashVariant} from 'genlayer-stable/types';
+const RPC='https://studio.genlayer.com/api';
+const configuredRpc=process.env.RIGHTRAIL_NODE_RPC||RPC;
+const RIGHTS=process.env.RIGHTRAIL_RIGHTS_ADDRESS||'',GATE=process.env.RIGHTRAIL_GATE_ADDRESS||'';
+const addr=v=>/^0x[0-9a-fA-F]{40}$/.test(v||'');
+const positive=v=>/^[1-9]\\d{0,7}$/.test(String(v??''))&&Number(v)<=100000000;
+const hash=v=>/^0x[0-9a-fA-F]{64}$/.test(v||'');
+const ready=()=>configuredRpc===RPC&&addr(RIGHTS)&&addr(GATE);
+const client=createClient({chain:studionet});
+const read=(address,functionName,args=[])=>client.readContract({address,functionName,args,transactionHashVariant:TransactionHashVariant.LATEST_FINAL});
+async function verifyNetwork(){
+ if(configuredRpc!==RPC)return false;
+ const resp=await fetch(RPC,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_chainId',params:[]}),signal:AbortSignal.timeout(9000)});
+ if(!resp.ok)return false;
+ const j=await resp.json();return !j.error&&parseInt(j.result,16)===61999;
 }
-function noCache(res) {
-  res.setHeader('Cache-Control', 'no-store, max-age=0');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-}
-async function probe() {
-  if (!/^https:\/\//.test(RPC)) return { verified: false, reason: 'Phase 2 node RPC not configured' };
-  const r = await fetch(RPC, { method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getBlockByNumber', params: ['0x0', false] }),
-    signal: AbortSignal.timeout(9000) });
-  if (!r.ok) return { verified: false, reason: 'RPC HTTP ' + r.status };
-  const json = await r.json();
-  const hash = json.result?.hash?.toLowerCase();
-  return { verified: hash === GENESIS, reason: hash === GENESIS ? 'Bradbury Phase 2 verified by genesis hash' : 'RPC genesis mismatch or not available' };
-}
-function readClient() {
-  // Explicit node URL is required for IC gen_call; the generic L2 RPC is insufficient.
-  const chain = { ...testnetBradbury, rpcUrls: {
-    ...(testnetBradbury.rpcUrls || {}),
-    default: { http: [RPC] },
-  } };
-  return createClient({ chain });
-}
-export default async function handler(req, res) {
-  noCache(res);
-  if (req.method !== 'GET') return reject(res, 405, 'GET only');
-  const op = String(req.query.op || 'config');
-  if (op === 'config') {
-    let check = { verified: false, reason: 'Not configured' };
-    if (/^https:\/\//.test(RPC)) {
-      try { check = await probe(); } catch { check = { verified: false, reason: 'RPC unavailable' }; }
-    }
-    return res.status(200).json({
-      ok: true, configured: configured() && check.verified,
-      network: 'Bradbury Phase 2', chainId: 4221,
-      phase2Verified: check.verified, detail: check.reason,
-      rights: address(RIGHTS) ? RIGHTS : null, gate: address(GATE) ? GATE : null,
-      protectedContentConfigured: !!(process.env.RIGHTRAIL_CONTENT_TEXT && process.env.RIGHTRAIL_CONTENT_ASSET_ID)
-    });
-  }
-  if (!configured()) return reject(res, 503, 'Bradbury contract addresses or node RPC not configured');
-  try {
-    const check = await probe();
-    if (!check.verified) return reject(res, 503, check.reason);
-    const client = readClient();
-    const read = (addr, method, args) => client.readContract({
-      address: addr, functionName: method, args, transactionHashVariant: TransactionHashVariant.LATEST_FINAL
-    });
-    let value;
-    const n = Number(req.query.id);
-    if (op === 'totals') {
-      value = { rights: await read(RIGHTS, 'totals', []), gate: await read(GATE, 'stats', []) };
-    } else if (op === 'asset' && id(req.query.id)) {
-      value = await read(RIGHTS, 'get_asset', [n]);
-    } else if (op === 'request' && id(req.query.id)) {
-      value = await read(RIGHTS, 'get_request', [n]);
-    } else if (op === 'permit' && id(req.query.id) && address(req.query.actor)) {
-      value = await read(RIGHTS, 'permit_status', [n, req.query.actor]);
-    } else if (op === 'gate' && id(req.query.id) && address(req.query.actor)) {
-      value = await read(GATE, 'can_access', [n, req.query.actor]);
-    } else if (op === 'receipt' && id(req.query.id) && address(req.query.actor)) {
-      value = await read(GATE, 'receipt_for', [n, req.query.actor]);
-    } else if (op === 'hasReceipt' && id(req.query.id) && address(req.query.actor)) {
-      value = await read(GATE, 'has_access_receipt', [n, req.query.actor]);
-    } else if (op === 'tx' && txhash(req.query.hash)) {
-      const tx = await client.getTransaction({ hash: req.query.hash });
-      const status = tx.statusName || tx.status || 'UNKNOWN';
-      const result = tx.txExecutionResultName || tx.consensus_data?.leader_receipt?.[0]?.execution_result || null;
-      return res.status(200).json({ ok: true, status, execution: result, found: true });
-    } else {
-      return reject(res, 400, 'Unsupported read method or invalid parameters');
-    }
-    return res.status(200).json({ ok: true, value });
-  } catch (e) {
-    return reject(res, 502, 'Read unavailable: ' + String(e?.message || 'RPC error').slice(0, 170));
-  }
+export default async function handler(req,res){
+ res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
+ const fail=(status,error)=>res.status(status).json({ok:false,error});
+ if(req.method!=='GET')return fail(405,'GET only');
+ const op=req.query?.op||'config';
+ if(typeof op!=='string')return fail(400,'Invalid operation');
+ if(op==='config'){
+  let verified=false;try{verified=await verifyNetwork()}catch{}
+  return res.status(200).json({ok:true,configured:Boolean(ready()&&verified),network:'GenLayer Studionet',
+   chainId:61999,studionetVerified:verified,detail:verified?'Studionet identity verified':'RPC unavailable, wrong chain, or old RPC configured',
+   rights:addr(RIGHTS)?RIGHTS:null,gate:addr(GATE)?GATE:null,
+   protectedContentConfigured:Boolean(process.env.RIGHTRAIL_CONTENT_TEXT&&process.env.RIGHTRAIL_CONTENT_ASSET_ID)});
+ }
+ if(!ready())return fail(503,'Studionet contracts not configured');
+ try{
+  if(!(await verifyNetwork()))return fail(503,'Studionet RPC not verified');
+  let value;const n=Number(req.query.id);
+  if(op==='totals')value={rights:await read(RIGHTS,'totals'),gate:await read(GATE,'stats')};
+  else if(op==='asset'&&positive(req.query.id))value=await read(RIGHTS,'get_asset',[n]);
+  else if(op==='request'&&positive(req.query.id))value=await read(RIGHTS,'get_request',[n]);
+  else if(op==='permit'&&positive(req.query.id)&&addr(req.query.actor))value=await read(RIGHTS,'permit_status',[n,req.query.actor]);
+  else if(op==='gate'&&positive(req.query.id)&&addr(req.query.actor))value=await read(GATE,'can_access',[n,req.query.actor]);
+  else if(op==='receipt'&&positive(req.query.id)&&addr(req.query.actor))value=await read(GATE,'receipt_for',[n,req.query.actor]);
+  else if(op==='hasReceipt'&&positive(req.query.id)&&addr(req.query.actor))value=await read(GATE,'has_access_receipt',[n,req.query.actor]);
+  else if(op==='tx'&&hash(req.query.hash)){
+    const t=await client.getTransaction({hash:req.query.hash});
+    if(!t)return res.status(200).json({ok:true,value:{found:false}});
+    const c=t.consensus_data??t.consensusData??{},leader=c.leader_receipt??c.leaderReceipt??null;
+    const outcomes=(Array.isArray(leader)?leader:[leader]).filter(Boolean).map(x=>String(x.execution_result??x.executionResult??'UNKNOWN').toUpperCase());
+    const explicit=t.txExecutionResultName;let execution='UNKNOWN';
+    if(explicit==='FINISHED_WITH_RETURN')execution='SUCCESS';
+    else if(explicit==='FINISHED_WITH_ERROR')execution='ERROR';
+    else if(outcomes.length&&outcomes.every(x=>x==='SUCCESS'))execution='SUCCESS';
+    else if(outcomes.some(x=>['ERROR','FAILURE','FINISHED_WITH_ERROR'].includes(x)))execution='ERROR';
+    value={found:true,status:String(t.statusName??t.status_name??t.status??'UNKNOWN'),execution};
+  }else return fail(400,'Unsupported read or invalid parameters');
+  return res.status(200).json({ok:true,value});
+ }catch(e){return fail(502,'Read unavailable: '+String(e?.message||'RPC error').slice(0,170))}
 }

@@ -1,16 +1,15 @@
 import './style.css';
-import { createClient } from 'genlayer-js';
-import { testnetBradbury } from 'genlayer-js/chains';
+import { createClient } from 'genlayer-stable';
+import { studionet } from 'genlayer-stable/chains';
 
 const $ = id => document.getElementById(id);
 const bySel = s => document.querySelector(s);
 const escape = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const parse = v => typeof v === 'string' ? JSON.parse(v) : v;
-const pendingKey = 'rightrail-bradbury-pending-v1';
-const explorer = 'https://scan.bradbury.genlayer.com/tx/';
-const BRADBURY_NODE = 'https://rpc-bradbury.genlayer.com';
-const BRADBURY_CHAIN = 'https://rpc.testnet-chain.genlayer.com';
-const PHASE2_GENESIS = '0x17d89764d4f4f963158fc4c5e8f2cb670c2837740b35f37081c12860c3df97e4';
+const pendingKey = 'rightrail-studionet-pending-v1';
+const explorer = 'https://explorer-studio.genlayer.com/tx/';
+const STUDIO_RPC = 'https://studio.genlayer.com/api';
+const STUDIO_CHAIN_ID = 61999;
 let config = null, account = null, wallet = null, busy = false, currentRequest = 0;
 const pages = ['explore','publish','request','access'];
 const title = x => x.charAt(0).toUpperCase() + x.slice(1);
@@ -52,18 +51,18 @@ async function refreshConfig() {
   try {
     const response=await fetch('/api/state?op=config',{cache:'no-store'});
     config=await response.json();
-    const ok=Boolean(config.configured&&config.phase2Verified&&hexAddress(config.rights)&&hexAddress(config.gate));
-    $('networkState').textContent=ok?'Bradbury Phase 2 · Verified':'Bradbury deployment pending';
+    const ok=Boolean(config.configured&&config.studionetVerified&&hexAddress(config.rights)&&hexAddress(config.gate));
+    $('networkState').textContent=ok?'Studionet · Verified':'Studionet deployment pending';
     $('networkState').classList.toggle('ready',ok);
     notify(ok
-      ? 'Connected to verified Bradbury Phase 2. Contract reads use finalized state; signing requires test GEN.'
-      : 'Builder preview · Contracts are not deployed/configured on verified Bradbury Phase 2. You may prepare a local policy draft; signing and protected access remain disabled.',ok?'ok':'info');
+      ? 'Connected to verified Studionet. Contract reads use finalized state; signing requires test GEN.'
+      : 'Builder preview · Contracts are not deployed/configured on verified Studionet. You may prepare a local policy draft; signing and protected access remain disabled.',ok?'ok':'info');
     if (ok) await loadTotals();
   }catch(error){config={configured:false};notify('Configuration unavailable. No on-chain actions will be sent.','error');}
 }
 function checkReady() {
-  if (!config?.configured||!config?.phase2Verified||!hexAddress(config.rights)||!hexAddress(config.gate))
-    throw new Error('Bradbury deployment is not verified yet. No wallet transaction was sent.');
+  if (!config?.configured||!config?.studionetVerified||!hexAddress(config.rights)||!hexAddress(config.gate))
+    throw new Error('Studionet deployment is not verified yet. No wallet transaction was sent.');
 }
 async function connectWallet() {
   if (account) {
@@ -79,37 +78,28 @@ async function connectWallet() {
 }
 $('walletBtn').onclick=async()=>{try{await connectWallet()}catch(e){notify(e.message,'error')}};
 window.ethereum?.on?.('accountsChanged',()=>{account=null;wallet=null;$('walletBtn').textContent='Connect wallet';notify('Wallet changed. Reconnect before signing.','error')});
-window.ethereum?.on?.('chainChanged',()=>{wallet=null;notify('Wallet network changed. The next signature will recheck Bradbury.','error')});
+window.ethereum?.on?.('chainChanged',()=>{wallet=null;notify('Wallet network changed. The next signature will recheck Studionet.','error')});
 async function signer() {
   checkReady();
   if (!account) await connectWallet();
   if (!account) throw new Error('Connect a wallet first.');
   if (!window.ethereum) throw new Error('Wallet provider missing');
-  // Chain definition and account must match. Phase 2 RPC identity is verified on the server.
-  const desiredChainId='0x107d';
-  const id=await window.ethereum.request({method:'eth_chainId'});
-  if (parseInt(id,16)!==4221) {
-    try {
-      await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:desiredChainId}]});
-    } catch (error) {
-      if (error?.code!==4902) throw new Error('Switch wallet to Bradbury chain ID 4221 first.');
+  const target='0x'+STUDIO_CHAIN_ID.toString(16);
+  const current=await window.ethereum.request({method:'eth_chainId'});
+  if(parseInt(current,16)!==STUDIO_CHAIN_ID){
+    try {await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:target}]})}
+    catch(e){
+      if(e?.code!==4902)throw new Error('Switch to GenLayer Studionet chain 61999 first');
       await window.ethereum.request({method:'wallet_addEthereumChain',params:[{
-        chainId:desiredChainId, chainName:'GenLayer Bradbury Phase 2',
-        rpcUrls:[BRADBURY_CHAIN],nativeCurrency:{name:'GEN',symbol:'GEN',decimals:18},
-        blockExplorerUrls:['https://scan.testnet-chain.genlayer.com']
+        chainId:target,chainName:'GenLayer Studionet',rpcUrls:[STUDIO_RPC],
+        nativeCurrency:{name:'GEN',symbol:'GEN',decimals:18},
+        blockExplorerUrls:['https://explorer-studio.genlayer.com']
       }]});
     }
   }
-  const chain=await window.ethereum.request({method:'eth_chainId'});
-  if (parseInt(chain,16)!==4221) throw new Error('Wrong wallet chain: expected 4221.');
-  // Bradbury Phase 1 shared the same chain ID. The wallet provider itself
-  // must return the actual Phase 2 block zero, independently of server checks.
-  const genesis=await window.ethereum.request({method:'eth_getBlockByNumber',params:['0x0',false]});
-  if (String(genesis?.hash||'').toLowerCase()!==PHASE2_GENESIS)
-    throw new Error('Wallet uses an old/incompatible Bradbury RPC. Edit this network RPC to '+BRADBURY_CHAIN+' and reconnect. No signature requested.');
-  // GenLayer IC SDK needs its NODE RPC for gen_*; wallet remains on Phase 2 L2.
-  const nodeChain={...testnetBradbury,rpcUrls:{...testnetBradbury.rpcUrls,default:{http:[BRADBURY_NODE]}}};
-  wallet=createClient({chain:nodeChain,account,provider:window.ethereum});
+  if(parseInt(await window.ethereum.request({method:'eth_chainId'}),16)!==STUDIO_CHAIN_ID)
+    throw new Error('Wallet is not on Studionet 61999. No signature requested.');
+  wallet=createClient({chain:studionet,account,provider:window.ethereum});
   return wallet;
 }
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -179,7 +169,7 @@ async function verifyRecord(record){
   }
   if(functionName==='adjudicate'){
     const req=parse(await api('request',{id:args[0]}));
-    if(req.decision!=='PENDING')return {id:args[0],message:'Consensus decision: '+req.decision};
+    if(['PERMIT','DENY','REVIEW'].includes(req.decision))return {id:args[0],message:'Persisted AI decision: '+req.decision};
   }
   if(functionName==='record_access'){
     const rec=await api('receipt',{id:args[0],actor});
@@ -236,13 +226,9 @@ async function signWrite(address,functionName,args){
   if(writeRecord())throw new Error('An existing signed transaction needs rechecking before you can send another.');
   const client=await signer();
   setBusy(true);
-  setActivity('Confirm in your wallet','Review the contract method, estimated GEN fees and network before signing.','working',1);
+  setActivity('Confirm in your wallet','Review the contract method, transaction details and network before signing.','working',1);
   try{
-    const intent={address,functionName,args,value:0n};
-    const estimate=await client.estimateTransactionFeesForWrite(intent);
-    const hash=await client.writeContract({
-      ...intent,fees:{distribution:estimate.distribution,feeValue:estimate.feeValue}
-    });
+    const hash=await client.writeContract({address,functionName,args,value:0n});
     if(!/^0x[0-9a-fA-F]{64}$/.test(hash||''))throw new Error('Wallet did not return a valid transaction hash.');
     const record={hash,functionName,args,actor:account,address,created:Date.now()};
     keepRecord(record);
@@ -259,7 +245,7 @@ $('publishForm').onsubmit=async e=>{
   const title=$('assetTitle').value.trim(),hash=$('contentDigest').value.trim(),policy=$('assetPolicy').value.trim();
   if(!/^[0-9a-f]{64}$/.test(hash))return notify('Enter an exact lowercase SHA-256 digest.','error');
   saveLocalDraft();
-  if(!config?.configured)return notify('Draft saved only in this browser. Bradbury contracts are not deployed/configured; no signature was requested.','info');
+  if(!config?.configured)return notify('Draft saved only in this browser. Studionet contracts are not deployed/configured; no signature was requested.','info');
   try{await signWrite(config.rights,'publish_asset',[title,hash,policy])}catch(err){notify(err.message,'error')}
 };
 $('requestForm').onsubmit=async e=>{

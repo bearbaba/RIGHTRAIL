@@ -7,14 +7,17 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "preflight:studionet": "node scripts/preflight_studionet.mjs"
   },
   "dependencies": {
-    "genlayer-js": "2.0.0-rc.2",
-    "viem": "2.37.5"
+    "viem": "2.37.5",
+    "genlayer-stable": "npm:genlayer-js@1.1.8"
   },
   "devDependencies": {
     "vite": "7.1.7"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }

@@ -6,7 +6,7 @@ The GenLayer model is **consensus over policy interpretation**. Validators indep
 
 Asset policy **version changes invalidate existing requests**. Access Gate receipts are bound to an EOA, request ID and the live permission state. No per-user grant can override retirement or a policy revision. A duplicate receipt for the same request/requester is rejected on chain.
 
-Protected-content gateway must **fail closed** on any invalid or unavailable RPC data, unverified Phase 2 genesis, signature mismatch, wrong hostname, expired challenge, missing gate receipt, mismatched content digest, revoked policy version or missing secret.
+Protected-content gateway must **fail closed** on any invalid or unavailable RPC data, unverified Studionet RPC identity, signature mismatch, wrong hostname, expired challenge, missing gate receipt, mismatched content digest, revoked policy version or missing secret.
 
 The EIP-191 proof is reusable for up to two minutes by the original signing wallet or anyone possessing its signed message. It is a proof of wallet authorization, **not** an exactly-once session or a no-copy DRM mechanism. A distributed multi-tenant production deployment should use durable server-generated nonce storage, one-time claims, access logs and per-tenant isolation.
 
@@ -14,4 +14,4 @@ The single-asset secret from Vercel environment variables is a **pilot**. It is 
 
 No owner private key, recovery phrase, RPC API key, signing service or demo secret may be committed. Never report SUCCESS from wallet confirmation or transaction finality alone. Read back a matching finalized state record.
 
-Bradbury Phase 2 uses chain ID 4221 **also used by prior deployments**. Require the documented genesis hash from a trusted GenLayer Node RPC; do not rely on chain ID alone.
+RIGHTRAIL now requires official GenLayer Studionet (61999) RPC identity and correct signed contract addresses. A healthy chain ID alone does not prove a deployed contract or GenVM success.

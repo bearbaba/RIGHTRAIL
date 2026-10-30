@@ -1,3 +1,4 @@
+# v0.2.16
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 """RIGHTRAIL: wallet-issued asset policies and consensus-adjudicated usage requests.
 
@@ -33,9 +34,6 @@ class RightsRail(gl.Contract):
     def __init__(self):
         self.asset_count = u256(0)
         self.request_count = u256(0)
-        self.assets = TreeMap()
-        self.requests = TreeMap()
-        self.policies = TreeMap()
 
     def _asset(self, asset_id: int) -> dict:
         _require(asset_id > 0 and asset_id <= int(self.asset_count), "asset not found")

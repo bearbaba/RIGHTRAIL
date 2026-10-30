@@ -1,6 +1,6 @@
 # RIGHTRAIL — One-video Project acceptance
 
-**Desired result:** one continuously understandable recording showing a new content policy, AI adjudication, actual access enforcement, a rejected action and policy invalidation, all signed on *Bradbury Phase 2*.
+**Desired result:** one continuously understandable recording showing a new content policy, AI adjudication, actual access enforcement, a rejected action and policy invalidation, all signed on *Studionet*.
 
 ## Evidence scenes (do not stage fake data)
 
@@ -21,10 +21,10 @@
 ## Submission materials
 
 - Source repository and README
-- Two deployed IC addresses and precise Bradbury Explorer links
+- Two deployed IC addresses and precise Studionet Explorer links
 - CI, GenVM runtime/fee profiling reports
 - Public dApp URL and a short English-captioned walkthrough
 - Failure/counterexample evidence
 - Reviewer guide with steps executable without access to the developer's private key
 
-**Current status:** not ready for GenLayer Projects submission; contracts are not yet deployed or signed on Bradbury.
+**Current status:** not ready for GenLayer Projects submission; contracts are not yet deployed or signed on Studionet.

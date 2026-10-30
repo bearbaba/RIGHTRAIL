@@ -1,11 +1,11 @@
-import { createClient } from 'genlayer-js';
-import { testnetBradbury } from 'genlayer-js/chains';
-import { TransactionHashVariant } from 'genlayer-js/types';
+import { createClient } from 'genlayer-stable';
+import { studionet } from 'genlayer-stable/chains';
+import { TransactionHashVariant } from 'genlayer-stable/types';
 import { verifyAccessChallenge } from '../lib/access-proof.js';
 import { createHash } from 'node:crypto';
 
-const GENESIS = '0x17d89764d4f4f963158fc4c5e8f2cb670c2837740b35f37081c12860c3df97e4';
-const RPC = process.env.RIGHTRAIL_NODE_RPC || '';
+const STUDIO_RPC = 'https://studio.genlayer.com/api';
+const RPC = process.env.RIGHTRAIL_NODE_RPC || STUDIO_RPC;
 const RIGHTS = process.env.RIGHTRAIL_RIGHTS_ADDRESS || '';
 const GATE = process.env.RIGHTRAIL_GATE_ADDRESS || '';
 const CONTENT = process.env.RIGHTRAIL_CONTENT_TEXT || '';
@@ -15,34 +15,30 @@ const address = s => /^0x[0-9a-fA-F]{40}$/.test(s || '');
 function fail(res, status, code) {
   return res.status(status).json({ ok: false, error: code });
 }
-async function checkGenesis() {
+async function checkStudionet() {
+  if(RPC !== STUDIO_RPC) return false;
   const response = await fetch(RPC, {
     method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getBlockByNumber', params: ['0x0', false], id: 2 }),
+    body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_chainId', params: [], id: 2 }),
     signal: AbortSignal.timeout(9000)
   });
   if (!response.ok) return false;
   const result = await response.json();
-  return result.result?.hash?.toLowerCase() === GENESIS;
+  return !result.error && parseInt(result.result,16) === 61999;
 }
-function reader() {
-  const chain = { ...testnetBradbury, rpcUrls: {
-    ...(testnetBradbury.rpcUrls || {}), default: { http: [RPC] }
-  } };
-  return createClient({ chain });
-}
+function reader(){return createClient({chain:studionet});}
 const parse = x => typeof x === 'string' ? JSON.parse(x) : x;
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'private, no-store, max-age=0');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   if (req.method !== 'POST') return fail(res, 405, 'POST only');
-  if (!address(RIGHTS) || !address(GATE) || !RPC.startsWith('https://') ||
+  if (!address(RIGHTS) || !address(GATE) || RPC !== STUDIO_RPC ||
       !CONTENT || !Number.isSafeInteger(CONTENT_ID) || CONTENT_ID < 1) {
     return fail(res, 503, 'Protected content gateway is not configured');
   }
   try {
-    if (!(await checkGenesis())) return fail(res, 503, 'Bradbury Phase 2 RPC not verified');
+    if (!(await checkStudionet())) return fail(res, 503, 'Studionet RPC not verified');
     const { message, signature } = req.body || {};
     let proof;
     try {
