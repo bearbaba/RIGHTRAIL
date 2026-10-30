@@ -1,0 +1,22 @@
+name: RIGHTRAIL diagnose Request 2 (read only)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - scripts/diagnose-request-two.mjs
+      - .github/workflows/diagnose-request-two.yml
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - name: Read latest-final totals, Requests 1/2 and production API
+        run: node scripts/diagnose-request-two.mjs
