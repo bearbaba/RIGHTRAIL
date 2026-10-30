@@ -1,0 +1,22 @@
+name: RIGHTRAIL verified receipt 1 — one-time evidence
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - scripts/verify-receipt-one.mjs
+      - .github/workflows/verify-receipt-one.yml
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - name: Verify signed receipt, wallet isolation, and live Production API
+        run: node scripts/verify-receipt-one.mjs
