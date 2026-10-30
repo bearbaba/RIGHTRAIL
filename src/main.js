@@ -8,6 +8,9 @@ const escape = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'
 const parse = v => typeof v === 'string' ? JSON.parse(v) : v;
 const pendingKey = 'rightrail-bradbury-pending-v1';
 const explorer = 'https://scan.bradbury.genlayer.com/tx/';
+const BRADBURY_NODE = 'https://rpc-bradbury.genlayer.com';
+const BRADBURY_CHAIN = 'https://rpc.testnet-chain.genlayer.com';
+const PHASE2_GENESIS = '0x17d89764d4f4f963158fc4c5e8f2cb670c2837740b35f37081c12860c3df97e4';
 let config = null, account = null, wallet = null, busy = false, currentRequest = 0;
 const pages = ['explore','publish','request','access'];
 const title = x => x.charAt(0).toUpperCase() + x.slice(1);
@@ -83,11 +86,30 @@ async function signer() {
   if (!account) throw new Error('Connect a wallet first.');
   if (!window.ethereum) throw new Error('Wallet provider missing');
   // Chain definition and account must match. Phase 2 RPC identity is verified on the server.
-  wallet=createClient({chain:testnetBradbury,account,provider:window.ethereum});
-  await wallet.connect('testnetBradbury');
-  const network=await window.ethereum.request({method:'eth_chainId'});
-  if (parseInt(network,16)!==4221) throw new Error('Wrong wallet network; expected Bradbury chain ID 4221.');
-  // Chain ID alone is insufficient: the server verifies the configured RPC genesis.
+  const desiredChainId='0x107d';
+  const id=await window.ethereum.request({method:'eth_chainId'});
+  if (parseInt(id,16)!==4221) {
+    try {
+      await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:desiredChainId}]});
+    } catch (error) {
+      if (error?.code!==4902) throw new Error('Switch wallet to Bradbury chain ID 4221 first.');
+      await window.ethereum.request({method:'wallet_addEthereumChain',params:[{
+        chainId:desiredChainId, chainName:'GenLayer Bradbury Phase 2',
+        rpcUrls:[BRADBURY_CHAIN],nativeCurrency:{name:'GEN',symbol:'GEN',decimals:18},
+        blockExplorerUrls:['https://scan.testnet-chain.genlayer.com']
+      }]});
+    }
+  }
+  const chain=await window.ethereum.request({method:'eth_chainId'});
+  if (parseInt(chain,16)!==4221) throw new Error('Wrong wallet chain: expected 4221.');
+  // Bradbury Phase 1 shared the same chain ID. The wallet provider itself
+  // must return the actual Phase 2 block zero, independently of server checks.
+  const genesis=await window.ethereum.request({method:'eth_getBlockByNumber',params:['0x0',false]});
+  if (String(genesis?.hash||'').toLowerCase()!==PHASE2_GENESIS)
+    throw new Error('Wallet uses an old/incompatible Bradbury RPC. Edit this network RPC to '+BRADBURY_CHAIN+' and reconnect. No signature requested.');
+  // GenLayer IC SDK needs its NODE RPC for gen_*; wallet remains on Phase 2 L2.
+  const nodeChain={...testnetBradbury,rpcUrls:{...testnetBradbury.rpcUrls,default:{http:[BRADBURY_NODE]}}};
+  wallet=createClient({chain:nodeChain,account,provider:window.ethereum});
   return wallet;
 }
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
