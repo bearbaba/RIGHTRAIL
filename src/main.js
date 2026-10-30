@@ -10,6 +10,8 @@ const pendingKey = 'rightrail-studionet-pending-v1';
 const explorer = 'https://explorer-studio.genlayer.com/tx/';
 const STUDIO_RPC = 'https://studio.genlayer.com/api';
 const STUDIO_CHAIN_ID = 61999;
+const PILOT_CONTENT_SHA256 = '2d136099dbe0ae1d822d94716b235b43d026ca70a49812cc25b89dfbe6663b7f';
+const PILOT_POLICY = "Free, non-commercial educational tutorials may use Aurora Education Pack content if the original creator is clearly credited with a visible link. Paid advertising, resale, and AI-model training are explicitly prohibited. Sponsored educational content requires separate manual approval. Any unclear or incomplete use must remain under review.";
 let config = null, account = null, wallet = null, busy = false, currentRequest = 0;
 const pages = ['explore','publish','request','access'];
 const title = x => x.charAt(0).toUpperCase() + x.slice(1);
@@ -123,6 +125,12 @@ async function inspectAsset(id) {
   return data;
 }
 $('inspectAsset').onsubmit=async e=>{e.preventDefault();try{await inspectAsset(inputId($('inspectAssetId').value))}catch(err){$('assetResult').textContent=err.message}};
+$('pilotExample').onclick=()=>{
+  $('assetTitle').value='Aurora Education Pack';
+  $('contentDigest').value=PILOT_CONTENT_SHA256;
+  $('assetPolicy').value=PILOT_POLICY;
+  notify('Testnet pilot loaded. Its content SHA-256 matches the private synthetic resource served by RIGHTRAIL for Asset #1. Review then sign only if you intend to create the FIRST asset on this deployment.','ok');
+};
 $('examplePolicy').onclick=()=>{
   $('assetPolicy').value='Community members may use this content in free, non-commercial educational tutorials if the original creator is clearly credited with a visible link. Paid advertisements, resale, and training AI models are not permitted. Sponsorship-funded educational articles require explicit case-by-case approval; ambiguous requests must not be automatically granted.';
 };

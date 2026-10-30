@@ -10,6 +10,7 @@ RIGHTRAIL is a separate GenLayer dApp where a creator publishes a content SHA-25
 - Repository: https://github.com/bearbaba/RIGHTRAIL
 - Studio: https://studio.genlayer.com
 - [Safe deployment and one-video acceptance](docs/STUDIONET_DEPLOYMENT.md)
+- [Single-video rehearsal with synthetic protected-content pilot](docs/SINGLE_VIDEO_REHEARSAL.md)
 - [Studionet RightsRail live verification](docs/STUDIONET_LIVE_EVIDENCE.md)
 - [Security and limitations](docs/SECURITY.md)
 - [Older Studio Dev / Bradbury schema failure](docs/GENVM_SCHEMA_BLOCKER_2026-10-30.md)
@@ -19,3 +20,5 @@ Run `npm install && npm test && npm run build` plus Python model tests. Use `npm
 The web app is now configured for real chain reads and wallet-signed testnet operations; only the actual user's signing and finalized readbacks can establish AI decisions and receipts. Never show fake signed transactions or AI outcomes. Its optional protected-resource pilot independently checks latest-final on-chain permission, Gate receipt, wallet signature and content SHA-256.
 
 Creator rights are self-asserted, not a copyright certificate. No custodial funds, no legal license, no mainnet claims. RIGHTRAIL is **independent of RELYNX Console**, whose ongoing submission must not be resubmitted as part of this migration. The old Bradbury deployment instructions are kept for historical investigation only.
+
+**Pilot for video acceptance:** Production is configured with a synthetic protected-text asset scoped to Asset #1 (currently no assets registered). In Publish asset, press **Use pilot example** to fill the hash and policy; the server only releases the synthetic resource after finalized permit, Gate receipt and a matching wallet proof. This is a real integration test, not valuable secret DRM.

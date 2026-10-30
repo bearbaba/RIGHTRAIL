@@ -35,3 +35,7 @@ Require BOTH schema checks to pass. In Studio 61999, inspect `rights_rail.py` an
 6. Creator updates policy; old permits/receipts immediately lose authority. Record TX hashes, finality, contract method schemas, and video.
 
 The prior accepted RELYNX IC and ongoing RELYNX Console submission are completely separate. No re-submission or duplicate score for RELYNX is claimed. Testnet only; no legal copyright certification, no security audit or mainnet readiness.
+
+## Synthetic protected-content pilot
+
+The Vercel project now includes `RIGHTRAIL_CONTENT_ASSET_ID=1` and server-only `RIGHTRAIL_CONTENT_TEXT`, hashed as `2d136099dbe0ae1d822d94716b235b43d026ca70a49812cc25b89dfbe6663b7f`. After confirming chain totals still have 0 assets, Publish asset → **Use pilot example** creates a claim whose digest matches that server asset. Follow the [single-video runbook](SINGLE_VIDEO_REHEARSAL.md). If Asset #1 is created with a different digest, access remains denied: never claim the pilot works by changing records or disguising the mismatch.
