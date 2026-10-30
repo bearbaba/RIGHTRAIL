@@ -4,16 +4,17 @@
 
 RIGHTRAIL is a separate GenLayer dApp where a creator publishes a content SHA-256 and a versioned policy, another wallet signs a use request, AI consensus adjudicates PERMIT / DENY / REVIEW, and a separate RightsAccessGate enforces a final permit with one wallet-bound on-chain receipt. Updating the creator policy invalidates old permissions and receipts.
 
-**Network target:** stable GenLayer **Studionet chain 61999**. **Deployment status: NOT YET DEPLOYED.** Source, frontend and backend migrated from Bradbury's release-candidate SDK to the same stable SDK used by RELYNX Console: `genlayer-stable` = `genlayer-js@1.1.8`.
+**Network target:** stable GenLayer **Studionet chain 61999**. **Deployment status: RightsRail on Studionet is verified by independent latest-final readback; RightsAccessGate is NOT YET DEPLOYED.** Source, frontend and backend migrated from Bradbury's release-candidate SDK to the same stable SDK used by RELYNX Console: `genlayer-stable` = `genlayer-js@1.1.8`.
 
 - Website: https://rightrail.vercel.app/
 - Repository: https://github.com/bearbaba/RIGHTRAIL
 - Studio: https://studio.genlayer.com
 - [Safe deployment and one-video acceptance](docs/STUDIONET_DEPLOYMENT.md)
+- [Studionet RightsRail live verification](docs/STUDIONET_LIVE_EVIDENCE.md)
 - [Security and limitations](docs/SECURITY.md)
 - [Older Studio Dev / Bradbury schema failure](docs/GENVM_SCHEMA_BLOCKER_2026-10-30.md)
 
-Run `npm install && npm test && npm run build` plus Python model tests. Use `npm run preflight:studionet` to check both contract schemas without spending GEN. Once both real deployments FINALIZE with GenVM SUCCESS, configure Vercel server-only `RIGHTRAIL_RIGHTS_ADDRESS` and `RIGHTRAIL_GATE_ADDRESS`; remove the stale Bradbury `RIGHTRAIL_NODE_RPC` setting or use exactly `https://studio.genlayer.com/api`.
+Run `npm install && npm test && npm run build` plus Python model tests. Use `npm run preflight:studionet` to check both contract schemas without spending GEN. RightsRail address: `0xef37288aB08A30697841C4fFe93C1D71E23C464b`. Once the separate Access Gate deploys with GenVM SUCCESS, configure Vercel server-only `RIGHTRAIL_RIGHTS_ADDRESS` and `RIGHTRAIL_GATE_ADDRESS`; remove the stale Bradbury `RIGHTRAIL_NODE_RPC` setting or use exactly `https://studio.genlayer.com/api`.
 
 The web app is a transparent **draft-only preview** until verified addresses exist. It must not show fake signed transactions or fake AI outcomes. Its optional protected-resource pilot independently checks latest-final on-chain permission, Gate receipt, wallet signature and content SHA-256.
 

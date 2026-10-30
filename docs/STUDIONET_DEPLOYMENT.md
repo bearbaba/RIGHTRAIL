@@ -2,7 +2,7 @@
 
 Studio: https://studio.genlayer.com · RPC: https://studio.genlayer.com/api · Explorer: https://explorer-studio.genlayer.com
 
-**Status: RIGHTRAIL is NOT deployed.** The new RC network failure is documented in [the schema blocker report](GENVM_SCHEMA_BLOCKER_2026-10-30.md). Porting to Studionet does not prove the contract will deploy. The two Python contracts use the stable legacy runner; their unparameterized `TreeMap()` assignments were removed because typed storage maps are zero-initialized.
+**Status: RightsRail deployed and independently read on latest-final Studionet state; RightsAccessGate still needs deployment.** The new RC network failure is documented in [the schema blocker report](GENVM_SCHEMA_BLOCKER_2026-10-30.md). Porting to Studionet does not prove the contract will deploy. The two Python contracts use the stable legacy runner; their unparameterized `TreeMap()` assignments were removed because typed storage maps are zero-initialized.
 
 ## Read-only checks before signatures
 
@@ -19,8 +19,8 @@ Require BOTH schema checks to pass. In Studio 61999, inspect `rights_rail.py` an
 
 ## Deploy with the user's wallet (no private keys in chat)
 
-1. Deploy `contracts/rights_rail.py`. Check FINALIZED and GenVM SUCCESS; read `totals()` (expected `{"assets":0,"requests":0}`). Record contract address and TX.
-2. Deploy `contracts/access_gate.py`, passing verified RightsRail address as the string constructor `rights_contract`. Check FINALIZED and GenVM SUCCESS; `stats().rights_address` must match.
+1. **DONE, do not redeploy:** RightsRail at `0xef37288aB08A30697841C4fFe93C1D71E23C464b`. Latest-final `totals()` returned `{"assets":0,"requests":0}`, deployed schema verified. See [live verification](STUDIONET_LIVE_EVIDENCE.md). The deployment TX hash was not captured in the supplied screenshot; verify it in Explorer before final video/submission.
+2. **NEXT:** Deploy `contracts/access_gate.py`, passing verified RightsRail address **`0xef37288aB08A30697841C4fFe93C1D71E23C464b`** as the string constructor `rights_contract`. Check FINALIZED and GenVM SUCCESS; `stats().rights_address` must match.
 3. Configure Vercel project `rightrail` with `RIGHTRAIL_RIGHTS_ADDRESS` and `RIGHTRAIL_GATE_ADDRESS`. Delete a stale `RIGHTRAIL_NODE_RPC` or set it to exact `https://studio.genlayer.com/api`. Never reuse Bradbury addresses.
 4. Redeploy Vercel and confirm `/api/state?op=config` returns `configured:true`, `studionetVerified:true`, `chainId:61999`. Verify real `totals` reads.
 5. Only if using the optional private-content pilot, set server-only `RIGHTRAIL_CONTENT_ASSET_ID` and `RIGHTRAIL_CONTENT_TEXT` with SHA-256 equal to the registered content digest.
