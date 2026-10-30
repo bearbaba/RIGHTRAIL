@@ -1,0 +1,22 @@
+name: RIGHTRAIL deployed contract readback (Studionet)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify_rights_deployment.mjs'
+      - '.github/workflows/verify-rights-deployment.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - name: Fetch deployed RightsRail and read its latest-final totals
+        run: node scripts/verify_rights_deployment.mjs
