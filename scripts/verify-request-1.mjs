@@ -1,0 +1,28 @@
+import {createClient} from 'genlayer-stable';
+import {studionet} from 'genlayer-stable/chains';
+import {TransactionHashVariant} from 'genlayer-stable/types';
+
+const hash='0xd04264062c902e3065ebadd54a9c05fb43ed1c6be676be5b82d387b689675f09';
+const RIGHTS='0xef37288aB08A30697841C4fFe93C1D71E23C464b';
+const usage="I will publish a free, non-commercial community tutorial using the Aurora Education Pack without sponsorship or advertising. I will credit its creator prominently.";
+const attribution="A visible link and creator credit in the opening paragraph of the tutorial.";
+const client=createClient({chain:studionet});
+const tx=await client.getTransaction({hash});
+if(!tx)throw Error('Signed request transaction missing');
+const status=String(tx.statusName??tx.status_name??tx.status??'').toUpperCase();
+const result=String(tx.txExecutionResultName??'').toUpperCase();
+if(status!=='FINALIZED')throw Error('Request TX not FINALIZED: '+status);
+if(result.includes('ERROR'))throw Error('Request TX execution failed');
+const raw=await client.readContract({address:RIGHTS,functionName:'get_request',args:[1],transactionHashVariant:TransactionHashVariant.LATEST_FINAL});
+const r=typeof raw==='string'?JSON.parse(raw):raw;
+const mismatch=[];
+if(r.id!==1)mismatch.push('id');
+if(r.asset_id!==1)mismatch.push('asset_id');
+if(r.usage!==usage)mismatch.push('usage');
+if(r.attribution!==attribution)mismatch.push('attribution');
+if(r.policy_version!==1)mismatch.push('policy_version');
+if(r.decision!=='PENDING')mismatch.push('decision expected PENDING at time of audit');
+const sender=String(tx.from_address??tx.fromAddress??'');
+if(sender&&r.requester?.toLowerCase()!==sender.toLowerCase())mismatch.push('requester != signed sender');
+if(mismatch.length)throw Error('REQUEST_READBACK_MISMATCH '+mismatch.join(',')+' state='+JSON.stringify(r));
+console.log('SIGNED_REQUEST_VERIFIED '+JSON.stringify({hash,status,sender,requestId:r.id,assetId:r.asset_id,requester:r.requester,decision:r.decision,active:r.active,policyVersion:r.policy_version,exactUsage:true,exactAttribution:true,latestFinal:true}));
