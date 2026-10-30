@@ -1,5 +1,6 @@
 import './style.css';
 import { encodePersonalSignMessage, walletSignatureIssue } from '../lib/unlock-wallet.js';
+import { requesterWalletStatus } from '../lib/requester-wallet.js';
 import { createClient } from 'genlayer-stable';
 import { studionet } from 'genlayer-stable/chains';
 
@@ -67,21 +68,47 @@ function checkReady() {
   if (!config?.configured||!config?.studionetVerified||!hexAddress(config.rights)||!hexAddress(config.gate))
     throw new Error('Studionet deployment is not verified yet. No wallet transaction was sent.');
 }
+function showConnectedWallet() {
+  $('walletBtn').textContent=account
+    ? account.slice(0,6)+'…'+account.slice(-4)+' · Disconnect'
+    : 'Connect wallet';
+  $('walletIdentity').textContent=account
+    ? 'Connected wallet: '+account
+    : 'No wallet connected · Permissions belong to the original Requester.';
+}
+async function refreshActiveRequest(){
+  if($('access').hidden)return;
+  const value=$('lookupRequestId').value||$('gateRequestId').value;
+  if(!value)return;
+  try{await lookupRequest(inputId(value))}
+  catch(err){$('requestResult').textContent='Could not refresh access for this wallet: '+err.message}
+}
 async function connectWallet() {
-  if (account) {
-    account=null;wallet=null;$('walletBtn').textContent='Connect wallet';notify('Wallet disconnected from this page.');return;
+  if(account){
+    account=null;wallet=null;showConnectedWallet();
+    $('requestResult').textContent='Disconnected from this page. Connect the Requester wallet to verify your own access.';
+    notify('Wallet disconnected locally. No on-chain data was changed.','info');
+    return;
   }
-  if(!window.ethereum) throw new Error('Install an EIP-1193 wallet (e.g. MetaMask) to sign.');
+  if(!window.ethereum)throw new Error('Install an EIP-1193 wallet (e.g. MetaMask) to sign.');
   const acc=await window.ethereum.request({method:'eth_requestAccounts'});
-  if (!acc?.[0]||!hexAddress(acc[0])) throw new Error('No valid wallet account returned.');
-  account=acc[0];
-  // Wallet is only connected locally; this never signs a transaction.
-  $('walletBtn').textContent=account.slice(0,6)+'…'+account.slice(-4)+' · Disconnect';
-  notify('Wallet connected: '+account+' (no transaction sent).','ok');
+  if(!acc?.[0]||!hexAddress(acc[0]))throw new Error('No valid wallet account returned.');
+  account=acc[0];wallet=null;showConnectedWallet();
+  notify('Connected: '+account+' (no transaction sent).','ok');
+  await refreshActiveRequest();
 }
 $('walletBtn').onclick=async()=>{try{await connectWallet()}catch(e){notify(e.message,'error')}};
-window.ethereum?.on?.('accountsChanged',()=>{account=null;wallet=null;$('walletBtn').textContent='Connect wallet';notify('Wallet changed. Reconnect before signing.','error')});
-window.ethereum?.on?.('chainChanged',()=>{wallet=null;notify('Wallet network changed. The next signature will recheck Studionet.','error')});
+window.ethereum?.on?.('accountsChanged',async accounts=>{
+  account=Array.isArray(accounts)&&hexAddress(accounts[0])?accounts[0]:null;
+  wallet=null;showConnectedWallet();
+  $('unlockResult').textContent='Account changed. Unlock requires a new proof from the Requester account.';
+  notify(account?'Wallet account switched to '+account+'. Rechecking access.':'Wallet disconnected. Connect the Requester account.','info');
+  await refreshActiveRequest();
+});
+window.ethereum?.on?.('chainChanged',()=>{
+  wallet=null;
+  notify('Wallet network changed. Select GenLayer Studionet (61999) before a new on-chain transaction.','info');
+});
 async function signer() {
   checkReady();
   if (!account) await connectWallet();
@@ -304,17 +331,23 @@ async function lookupRequest(requestId){
   currentRequest=requestId;
   const record=parse(await api('request',{id:requestId}));
   const asset=parse(await api('asset',{id:record.asset_id}));
-  const allowed=Boolean(account&&await api('permit',{id:requestId,actor:account}));
-  let receipt='';
-  if(account)receipt=await api('receipt',{id:requestId,actor:account});
+  const identity=requesterWalletStatus(record.requester,account);
+  const allowed=Boolean(identity.match && await api('permit',{id:requestId,actor:account}));
+  const receipt=identity.match ? await api('receipt',{id:requestId,actor:account}) : '';
   $('requestResult').innerHTML='<span class="badge '+(record.decision==='DENY'?'bad':record.decision!=='PERMIT'?'warn':'')+'">'+escape(record.decision)+'</span>'+
-    infoRow('Asset',' #'+record.asset_id+' · '+asset.title)+infoRow('Requester',record.requester)+
+    '<p class="'+(identity.match?'wallet-matched':'wallet-mismatch')+'">'+escape(identity.reason)+'</p>'+
+    infoRow('Asset',' #'+record.asset_id+' · '+asset.title)+
+    infoRow('Requester (rights holder)',record.requester)+
+    infoRow('Your connected wallet',account||'None')+
     infoRow('Policy snapshot','v'+record.policy_version+' · current v'+asset.version)+
     infoRow('Usage',record.usage)+infoRow('Attribution',record.attribution)+
-    infoRow('Wallet permit',allowed?'VALID for connected wallet':'NOT GRANTED for connected wallet')+
-    infoRow('Access receipt',receipt?JSON.stringify(parse(receipt)):'No matching receipt for connected wallet');
+    infoRow('Wallet permit',allowed?'VALID for connected wallet':identity.match?'NOT GRANTED by current policy':'NOT CHECKED — connect the original Requester')+
+    infoRow('Access receipt',receipt?JSON.stringify(parse(receipt)):identity.match?'No matching receipt for connected wallet':'Receipt belongs to Requester, not the connected wallet');
   $('gateRequestId').value=requestId;
-  return {record,asset,allowed,receipt};
+  const signBtn=$('accessForm').querySelector('button[type="submit"]');
+  signBtn.disabled=!identity.match||Boolean(receipt)||!allowed;
+  signBtn.title=!identity.match?'Connect the original Requester wallet':receipt?'Receipt already exists; no new on-chain signing needed':!allowed?'Not permitted by current policy':'Create a one-time receipt';
+  return {record,asset,allowed,receipt,identity};
 }
 $('lookupRequestForm').onsubmit=async e=>{
   e.preventDefault();try{await lookupRequest(inputId($('lookupRequestId').value))}catch(err){$('requestResult').textContent=err.message}
@@ -325,6 +358,9 @@ $('accessForm').onsubmit=async e=>{
     checkReady();
     if(!account)await connectWallet();
     const reqId=inputId($('gateRequestId').value);
+    const request=parse(await api('request',{id:reqId}));
+    const identity=requesterWalletStatus(request.requester,account);
+    if(!identity.match)throw new Error(identity.reason+' No transaction was sent.');
     const permit=await api('gate',{id:reqId,actor:account});
     if(permit!==true)throw new Error('Consumer Gate refused this wallet/request. No transaction was sent.');
     const existing=await api('receipt',{id:reqId,actor:account});
@@ -342,6 +378,9 @@ $('unlockBtn').onclick=async()=>{
     if(!account) await connectWallet();
     if(!account || !window.ethereum) throw new Error('Connect the requester wallet before unlocking.');
     const requestId=inputId($('gateRequestId').value);
+    const request=parse(await api('request',{id:requestId}));
+    const identity=requesterWalletStatus(request.requester,account);
+    if(!identity.match)throw new Error(identity.reason+' No new transaction or signature was sent.');
     const accounts=await window.ethereum.request({method:'eth_accounts'});
     if(!Array.isArray(accounts) || !accounts.some(a=>String(a).toLowerCase()===account.toLowerCase()))
       throw new Error('The active wallet account changed. Disconnect and reconnect the requester wallet.');
@@ -392,6 +431,7 @@ $('recheckTx').onclick=async()=>{const record=writeRecord();if(record&&!busy)awa
   if(draft){$('assetTitle').value=draft.title||'';$('contentDigest').value=draft.digest||'';$('assetPolicy').value=draft.policy||''}
  }catch{}
  await refreshConfig();
+ showConnectedWallet();
  const record=writeRecord();
  if(record?.hash)followTransaction(record);
 })();
