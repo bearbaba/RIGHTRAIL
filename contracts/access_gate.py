@@ -23,6 +23,8 @@ class RightsAccessGate(gl.Contract):
     def __init__(self, rights_contract: str):
         self.rights_address = Address(rights_contract)
         self.receipt_count = u256(0)
+        self.receipts = TreeMap()
+        self.by_request_actor = TreeMap()
 
     def _key(self, request_id: int, actor: str) -> str:
         _require(request_id > 0, "invalid request")
