@@ -1,0 +1,24 @@
+name: RIGHTRAIL Studionet read-only schema
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'contracts/**'
+      - 'package.json'
+      - 'scripts/preflight_studionet.mjs'
+      - '.github/workflows/studionet-schema.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unsigned-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - name: Verify both contract schemas on stable Studionet (no wallet, no GEN)
+        run: npm run preflight:studionet
