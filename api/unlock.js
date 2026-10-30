@@ -1,7 +1,7 @@
 import { createClient } from 'genlayer-js';
 import { testnetBradbury } from 'genlayer-js/chains';
 import { TransactionHashVariant } from 'genlayer-js/types';
-import { verifyMessage } from 'viem';
+import { verifyAccessChallenge } from '../lib/access-proof.js';
 import { createHash } from 'node:crypto';
 
 const GENESIS = '0x17d89764d4f4f963158fc4c5e8f2cb670c2837740b35f37081c12860c3df97e4';
@@ -44,27 +44,13 @@ export default async function handler(req, res) {
   try {
     if (!(await checkGenesis())) return fail(res, 503, 'Bradbury Phase 2 RPC not verified');
     const { message, signature } = req.body || {};
-    if (typeof message !== 'string' || message.length > 380 || !/^0x[0-9a-fA-F]{130}$/.test(signature || '')) {
-      return fail(res, 400, 'Invalid wallet proof');
+    let proof;
+    try {
+      proof = await verifyAccessChallenge({ message, signature, host: req.headers.host });
+    } catch {
+      return fail(res, 401, 'Invalid, expired, or mismatched wallet proof');
     }
-    // The browser signs the exact host, request and short-lived timestamp.
-    // A valid receipt is checked again at LATEST_FINAL on every unlock.
-    const lines = message.split('\n');
-    if (lines.length !== 6 || lines[0] !== 'RIGHTRAIL ACCESS' ||
-        lines[1] !== 'Host:' + req.headers.host ||
-        !/^Request:[1-9]\d{0,7}$/.test(lines[2]) ||
-        !/^Actor:0x[0-9a-fA-F]{40}$/.test(lines[3]) ||
-        !/^Issued:\d{13}$/.test(lines[4]) ||
-        !/^Nonce:[0-9a-f]{32}$/.test(lines[5])) {
-      return fail(res, 400, 'Wallet challenge mismatch');
-    }
-    const id = Number(lines[2].slice(8));
-    const actor = lines[3].slice(6);
-    const issued = Number(lines[4].slice(7));
-    if (Math.abs(Date.now() - issued) > 120000) return fail(res, 401, 'Wallet proof expired');
-    if (!(await verifyMessage({ address: actor, message, signature }))) {
-      return fail(res, 401, 'Signature did not match requester');
-    }
+    const { actor, requestId: id } = proof;
     const client = reader();
     const read = (address, functionName, args) => client.readContract({
       address, functionName, args, transactionHashVariant: TransactionHashVariant.LATEST_FINAL
