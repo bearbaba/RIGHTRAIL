@@ -67,6 +67,11 @@
         <div class="page-intro"><span class="eyebrow">REQUEST RIGHTS / 02</span><h1>Ask before you use.</h1><p>Describe the specific use. The signed request becomes the subject of an independent GenLayer consensus decision.</p></div>
         <div class="two-col form-layout"><section class="panel"><h2>New permission request</h2>
           <form id="requestForm"><label class="field"><span>ASSET ID</span><input id="requestAssetId" type="number" min="1" placeholder="Asset number" required/></label>
+          <div class="form-actions" aria-label="Testnet request examples">
+            <button class="btn btn-outline" type="button" id="allowExample">Use PERMIT example</button>
+            <button class="btn btn-outline" type="button" id="denyExample">Use DENY example</button>
+            <button class="btn btn-quiet" type="button" id="reviewExample">Use REVIEW example</button>
+          </div>
           <label class="field"><span>INTENDED USE</span><textarea id="usageText" rows="6" minlength="32" maxlength="1200" required placeholder="What content, channel, audience, distribution, sponsorship and AI processing will be involved?"></textarea></label>
           <label class="field"><span>ATTRIBUTION PLAN</span><input id="attributionText" minlength="3" maxlength="300" required placeholder="e.g. Link to creator and show credits in the first paragraph"/></label>
           <button class="btn btn-primary" type="submit">Sign usage request <span>↗</span></button></form>

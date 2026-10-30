@@ -212,7 +212,11 @@ async function followTransaction(record){
                 notify(verified.message,'ok');setBusy(false);loadTotals();
                 if(record.functionName==='publish_asset')showPage('explore');
                 if(record.functionName==='request_usage')showPage('request');
-                if(record.functionName==='adjudicate'||record.functionName==='record_access')showPage('access');
+                if(record.functionName==='adjudicate'){
+                  showPage('access');
+                  try{await lookupRequest(record.args[0])}catch(e){notify('Decision saved; refresh Request #'+record.args[0]+' to inspect permit: '+e.message,'info')}
+                }
+                if(record.functionName==='record_access')showPage('access');
                 return;
               }
             }catch{}
@@ -256,6 +260,30 @@ $('publishForm').onsubmit=async e=>{
   if(!config?.configured)return notify('Draft saved only in this browser. Studionet contracts are not deployed/configured; no signature was requested.','info');
   try{await signWrite(config.rights,'publish_asset',[title,hash,policy])}catch(err){notify(err.message,'error')}
 };
+const DEMO_REQUESTS={
+  permit:{
+    usage:'I will publish a free, non-commercial community tutorial using the Aurora Education Pack without sponsorship or advertising. I will credit its creator prominently.',
+    attribution:'A visible link and creator credit in the opening paragraph of the tutorial.'
+  },
+  deny:{
+    usage:'I will resell the Aurora Education Pack in a paid subscription and use its contents in commercial advertisements and AI model training.',
+    attribution:'Creator name in credits.'
+  },
+  review:{
+    usage:'I would like to use the Aurora Education Pack in a sponsored educational livestream, but I have not obtained case-by-case permission from the creator.',
+    attribution:'Visible creator link in the livestream description.'
+  }
+};
+function fillDemoRequest(kind){
+  const example=DEMO_REQUESTS[kind];
+  $('requestAssetId').value='1';
+  $('usageText').value=example.usage;
+  $('attributionText').value=example.attribution;
+  notify('Loaded '+kind.toUpperCase()+' test case for Asset #1. No transaction was submitted. Review the request, then sign when ready.','ok');
+}
+$('allowExample').onclick=()=>fillDemoRequest('permit');
+$('denyExample').onclick=()=>fillDemoRequest('deny');
+$('reviewExample').onclick=()=>fillDemoRequest('review');
 $('requestForm').onsubmit=async e=>{
   e.preventDefault();
   try{

@@ -24,3 +24,9 @@
 9. Save all finalized TX hashes, exact contract addresses, verdicts, acceptance/rollback receipts and API readbacks. One full video is sufficient if it transparently demonstrates the consequential path.
 
 **Boundary:** This proves consent-based access to a specific content gateway, not verified copyright ownership, an NFT license, or preventing content copying. Server synthetic content is not sensitive. The EIP-191 access challenge is time-bound, not strictly once-only. Any omitted or failed step remains unverified rather than assumed successful.
+
+## One-click request examples
+
+The **Request permission** screen now includes `Use PERMIT example`, `Use DENY example`, and `Use REVIEW example`; each fills Asset ID 1 and the exact text for the relevant test. They **do not send or sign** anything. The example labels are expectations, not precomputed outcomes: only the actual on-chain AI adjudication verdict is evidence. You can use the same wallet for a minimum first smoke, but a separate requester wallet is necessary to demonstrate cross-wallet access controls correctly.
+
+The pinned stable SDK (`genlayer-js@1.1.8`) does not implement `estimateTransactionFeesForWrite`; the UI uses its supported `writeContract` path. If wallet signing rejects, preserve the message and avoid manually resubmitting until the status of any returned transaction hash is checked.

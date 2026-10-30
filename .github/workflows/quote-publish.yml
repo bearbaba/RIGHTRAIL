@@ -1,4 +1,4 @@
-name: RIGHTRAIL unsigned publish fee preflight
+name: RIGHTRAIL stable SDK capabilities
 on:
   push:
     branches: [main]
@@ -18,5 +18,5 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-audit --no-fund
-      - name: Quote actual publish without wallet or signature
+      - name: Check stable client read/write methods without signing
         run: node scripts/quote-publish.mjs
