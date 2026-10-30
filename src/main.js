@@ -27,7 +27,7 @@ function showPage(page, scroll = true) {
 document.querySelectorAll('[data-page],[data-jump]').forEach(el=>el.addEventListener('click',()=>showPage(el.dataset.page||el.dataset.jump)));
 window.addEventListener('hashchange',()=>showPage(window.location.hash.slice(1)||'explore',false));
 function setActivity(heading, detail, state='idle', stage=0, hash='') {
-  $('.activity').dataset.state=state;
+  bySel('.activity').dataset.state=state;
   $('txHeading').textContent=heading;
   $('txInfo').textContent=detail;
   for(let i=1;i<=3;i++)$('s'+i).className=i<stage?'done':i===stage?'current':'';
