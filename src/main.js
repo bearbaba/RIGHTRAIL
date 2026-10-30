@@ -1,4 +1,5 @@
 import './style.css';
+import { encodePersonalSignMessage, walletSignatureIssue } from '../lib/unlock-wallet.js';
 import { createClient } from 'genlayer-stable';
 import { studionet } from 'genlayer-stable/chains';
 
@@ -331,27 +332,56 @@ $('accessForm').onsubmit=async e=>{
     await signWrite(config.gate,'record_access',[reqId,$('actionKey').value.trim()]);
   }catch(err){notify(err.message,'error')}
 };
+let unlockPending=false;
 $('unlockBtn').onclick=async()=>{
+  if(unlockPending || busy) return;
+  unlockPending=true;
+  $('unlockBtn').disabled=true;
   try{
-    checkReady();if(!account)await connectWallet();if(!account)throw new Error('Connect wallet.');
+    checkReady();
+    if(!account) await connectWallet();
+    if(!account || !window.ethereum) throw new Error('Connect the requester wallet before unlocking.');
     const requestId=inputId($('gateRequestId').value);
+    const accounts=await window.ethereum.request({method:'eth_accounts'});
+    if(!Array.isArray(accounts) || !accounts.some(a=>String(a).toLowerCase()===account.toLowerCase()))
+      throw new Error('The active wallet account changed. Disconnect and reconnect the requester wallet.');
     const status=await api('hasReceipt',{id:requestId,actor:account});
-    if(status!==true)throw new Error('No current on-chain permit and matching access receipt. Unlock denied.');
-    if(!config.protectedContentConfigured)throw new Error('Protected content is not provisioned on this server.');
+    if(status!==true) throw new Error('No current on-chain permit and matching access receipt. Unlock denied.');
+    if(!config.protectedContentConfigured) throw new Error('Protected content is not provisioned on this server.');
     const arr=new Uint8Array(16);crypto.getRandomValues(arr);
     const nonce=Array.from(arr,v=>v.toString(16).padStart(2,'0')).join('');
     const message=['RIGHTRAIL ACCESS','Host:'+location.host,'Request:'+requestId,
       'Actor:'+account,'Issued:'+Date.now(),'Nonce:'+nonce].join('\n');
-    const signature=await window.ethereum.request({method:'personal_sign',params:[message,account]});
+    $('unlockResult').textContent='Waiting for your wallet signature. Open the wallet extension and approve the RIGHTRAIL ACCESS message (no GEN or on-chain transaction).';
+    let signature;
+    try{
+      signature=await window.ethereum.request({
+        method:'personal_sign',
+        params:[encodePersonalSignMessage(message),account]
+      });
+    }catch(error){
+      const issue=walletSignatureIssue(error);
+      $('unlockResult').textContent=issue.message;
+      notify(issue.message,issue.cancelled?'info':'error');
+      return;
+    }
+    if(!/^0x[0-9a-fA-F]{130}$/.test(signature||''))throw new Error('The wallet did not return a valid signature. No content was released.');
+    $('unlockResult').textContent='Signature accepted. Verifying current on-chain permission, receipt and content digest…';
     const response=await fetch('/api/unlock',{method:'POST',headers:{'content-type':'application/json'},
       body:JSON.stringify({message,signature}),cache:'no-store'});
     const result=await response.json();
-    if(!response.ok||!result.ok)throw new Error(result.error||'Access denied');
+    if(!response.ok||!result.ok)throw new Error(result.error||'Access denied by the protected-content server.');
     $('unlockResult').innerHTML='<span class="badge">ACCESS VERIFIED</span><p></p><small></small>';
     $('unlockResult').querySelector('p').textContent=result.content;
     $('unlockResult').querySelector('small').textContent='Verified SHA-256: '+result.digest;
     notify('Protected content successfully unlocked after current on-chain checks.','ok');
-  }catch(err){$('unlockResult').textContent='ACCESS DENIED: '+err.message;notify(err.message,'error')}
+  }catch(err){
+    $('unlockResult').textContent='ACCESS NOT VERIFIED: '+(err?.message||String(err));
+    notify(err?.message||String(err),'error');
+  }finally{
+    unlockPending=false;
+    $('unlockBtn').disabled=busy;
+  }
 };
 $('clearTx').onclick=()=>{if(!busy){setActivity('Ready when you are.','Wallet actions will appear here with their real hash and execution status.');$('recheckTx').hidden=true}};
 $('recheckTx').onclick=async()=>{const record=writeRecord();if(record&&!busy)await followTransaction(record)};

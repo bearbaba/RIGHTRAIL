@@ -87,6 +87,7 @@
           </section><section class="panel"><h2>Access gateway</h2><p class="muted">A permit is valid only for the original requester and the currently active policy version. A Gate receipt alone cannot override revoked permission.</p>
            <form id="accessForm"><label class="field"><span>REQUEST ID</span><input id="gateRequestId" type="number" min="1" required/></label><label class="field"><span>ACTION REFERENCE</span><input id="actionKey" maxlength="80" minlength="4" placeholder="e.g. use-article-2026-001" required/></label><button class="btn btn-primary" type="submit">Sign access receipt <span>↗</span></button></form>
            <button class="btn btn-outline full" id="unlockBtn">Verify wallet & unlock protected content →</button>
+           <p class="muted">Already have a receipt? Do not sign another access transaction. This button only requests a wallet message signature (no GEN). Check your wallet extension for an approval popup.</p>
            <div id="unlockResult" class="result-slot">Protected resources require a configured content gateway and valid on-chain receipt.</div>
           </section></div>
       </section>
