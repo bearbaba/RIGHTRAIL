@@ -27,3 +27,13 @@ jobs:
           node-version: 22
       - run: npm install --no-audit --no-fund
       - run: node scripts/preflight_v2.mjs
+  live-readback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/verify_v2_live.mjs
