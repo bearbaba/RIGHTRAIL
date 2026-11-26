@@ -6,7 +6,7 @@ RIGHTRAIL is an open-source GenLayer Studionet dApp that links creator-declared,
 
 ## V2 — scoped grants and one-time delivery (Studionet)
 
-[Live V2 console](https://rightrail.vercel.app/v2.html) · [V2 evidence and limitations](docs/V2_MILESTONE.md) · [ScopedRightsGate source](contracts/scoped_rights_gate.py)
+[Unified V2 workspace](https://rightrail.vercel.app/) · [Read-only Audit Evidence](https://rightrail.vercel.app/#evidence) · [Legacy V1 archive](https://rightrail.vercel.app/legacy.html) · [V2 evidence and limitations](docs/V2_MILESTONE.md) · [ScopedRightsGate source](contracts/scoped_rights_gate.py)
 
 V2 extends the original AI permit with creator-issued per-request grants, bounded TTL and quota, atomic on-chain challenge receipts, selective revocation, and wallet-bound one-time delivery using Redis SET NX. It preserves the existing AI adjudication and does not replace it with a second AI judge.
 

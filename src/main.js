@@ -120,6 +120,7 @@ async function signer() {
   if (!account) await connectWallet();
   if (!account) throw new Error('Connect a wallet first.');
   if (!window.ethereum) throw new Error('Wallet provider missing');
+  const requestedAccount=account;
   const target='0x'+STUDIO_CHAIN_ID.toString(16);
   const current=await window.ethereum.request({method:'eth_chainId'});
   if(parseInt(current,16)!==STUDIO_CHAIN_ID){
@@ -135,6 +136,9 @@ async function signer() {
   }
   if(parseInt(await window.ethereum.request({method:'eth_chainId'}),16)!==STUDIO_CHAIN_ID)
     throw new Error('Wallet is not on Studionet 61999. No signature requested.');
+  const active=(await window.ethereum.request({method:'eth_accounts'}))?.[0];
+  if(!active||active.toLowerCase()!==requestedAccount.toLowerCase())throw Error('Wallet account changed; reconnect and review.');
+  account=active;showConnectedWallet();
   wallet=feeClient(account,window.ethereum);
   return wallet;
 }
@@ -160,6 +164,7 @@ async function inspectAsset(id) {
 }
 $('inspectAsset').onsubmit=async e=>{e.preventDefault();try{await inspectAsset(inputId($('inspectAssetId').value))}catch(err){$('assetResult').textContent=err.message}};
 $('pilotExample').onclick=()=>{
+  if(unified){$('assetPolicy').value=PILOT_POLICY;notify('Sample policy loaded. Choose your own asset name and real SHA-256; no content is provisioned automatically.','ok');return;}
   $('assetTitle').value='Aurora Education Pack';
   $('contentDigest').value=PILOT_CONTENT_SHA256;
   $('assetPolicy').value=PILOT_POLICY;
@@ -313,7 +318,7 @@ $('publishForm').onsubmit=async e=>{
   try{await signWrite(config.rights,'publish_asset',[title,hash,policy])}catch(err){notify(err.message,'error')}
 };
 $('videoPolicy').onclick=()=>{
-  $('updateAssetId').value='1';
+  if(!unified)$('updateAssetId').value='1';
   $('updatePolicyText').value=PILOT_POLICY;
   $('updatePolicyResult').textContent='Example loaded. Review the full policy, then sign with the original Creator wallet. This does not sign automatically.';
 };
@@ -379,7 +384,9 @@ async function lookupRequest(requestId){
   const asset=parse(await api('asset',{id:record.asset_id}));
   const identity=requesterWalletStatus(record.requester,account);
   const stale=record.policy_version!==asset.version;
-  const allowed=Boolean(identity.match&&await api('permit',{id:requestId,actor:account}));
+  const livePermit=unified?await api('permit',{id:requestId,actor:record.requester}):false;
+  const allowed=Boolean(identity.match&&(unified?livePermit:await api('permit',{id:requestId,actor:account})));
+  const creatorView=unified&&account?.toLowerCase()===asset.owner;
   const receipt=!unified&&identity.match ? await api('receipt',{id:requestId,actor:account}) : '';
   if(unified)$('requestId').value=requestId;
   const historicalPermit=record.decision==='PERMIT'&&stale;
@@ -393,14 +400,14 @@ async function lookupRequest(requestId){
     note='<p class="revoke-note" role="status"><b>ACCESS NOT GRANTED</b> — The AI decision is '+escape(record.decision)+'. No access receipt can override this result.</p>';
   }
   $('requestResult').innerHTML='<span class="badge '+badgeColor+'">'+escape(badge)+'</span>'+note+
-    '<p class="'+(identity.match?'wallet-matched':'wallet-mismatch')+'">'+escape(identity.reason)+'</p>'+
+    '<p class="'+(creatorView||identity.match?'wallet-matched':'wallet-mismatch')+'">'+escape(creatorView?'Creator wallet connected · can issue grants for a live permit.':identity.reason)+'</p>'+
     infoRow('Asset',' #'+record.asset_id+' · '+asset.title)+
     infoRow('Requester (rights holder)',record.requester)+
     infoRow('Your connected wallet',account||'None')+
     infoRow('Policy snapshot','v'+record.policy_version+' · current v'+asset.version,stale?'denied':'normal')+
     infoRow('Usage',record.usage)+infoRow('Attribution',record.attribution)+
-    infoRow('Wallet permit',allowed?'VALID for connected wallet':stale?'REVOKED — POLICY VERSION CHANGED':identity.match?'NOT GRANTED by current policy':'NOT CHECKED — connect the original Requester',allowed?'normal':'denied')+
-    (unified?infoRow('Next step',record.decision==='PERMIT'&&!stale?'Creator may issue a scoped grant for a configured asset.':'No current permit; grant issuance unavailable','neutral'):infoRow('Access receipt',receipt?(stale?'ARCHIVED / NOT VALID FOR ACCESS · ':'')+JSON.stringify(parse(receipt)):identity.match?'No matching receipt for connected wallet':'Receipt belongs to Requester, not the connected wallet',receipt&&allowed?'normal':'neutral'));
+    (unified?infoRow('Current AI permit',livePermit?'VALID for original requester':'NOT GRANTED',livePermit?'normal':'denied'):infoRow('Wallet permit',allowed?'VALID for connected wallet':stale?'REVOKED — POLICY VERSION CHANGED':identity.match?'NOT GRANTED by current policy':'NOT CHECKED — connect the original Requester',allowed?'normal':'denied'))+
+    (unified?infoRow('Next step',livePermit===true?'Creator may issue a scoped grant for a configured asset.':'No current permit; grant issuance unavailable','neutral'):infoRow('Access receipt',receipt?(stale?'ARCHIVED / NOT VALID FOR ACCESS · ':'')+JSON.stringify(parse(receipt)):identity.match?'No matching receipt for connected wallet':'Receipt belongs to Requester, not the connected wallet',receipt&&allowed?'normal':'neutral'));
   if(unified)return {record,asset,allowed,receipt,identity};
   $('gateRequestId').value=requestId;
   const signBtn=$('accessForm').querySelector('button[type="submit"]');

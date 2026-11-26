@@ -167,15 +167,16 @@ async function init(){
     config=b.ready===true?b:null;
     $('config').textContent=(config?'V2 READY':'V2 LOCKED')+' · '+(b.storeOnline?'Redis online':'Redis unavailable')+' · '+(b.assetIds||[]).map(x=>'Asset #'+x+' SHA-256 verified').join(', ');
     $('config').title=details;
-    if(config){const stats=parse(await read(config.gate,'stats'));$('grantsCount').textContent=stats.grants;$('v2ReceiptsCount').textContent=stats.receipts;}
+    if(config){try{const stats=parse(await read(config.gate,'stats'));$('grantsCount').textContent=stats.grants;$('v2ReceiptsCount').textContent=stats.receipts;}catch{ /* Counts stay unavailable; readiness was verified separately. */ }}
     $('config').dataset.ready=config?'true':'false';
   }catch(e){$('config').textContent='V2 LOCKED · '+(e?.message||'configuration unavailable')+' · No transaction will be sent.';$('config').dataset.ready='false'}
-  const p=load(key);if(p?.tx){link(p.tx);status('Saved transaction. Recheck same hash before any new action.')}
+  const p=load(key);if(p?.tx){link(p.tx);status('Saved transaction. Recheck same hash before any new action.');}
+  const proof=load(proofKey);if(proof?.grant){$('grantId').value=proof.grant;if(!p?.tx)status('Saved proof for grant #'+proof.grant+' · connect its original requester to deliver.');}
   buttons();
 }
 function element(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n}
 function grantCard(g,can,receipt=null,links=null){
-  const phase=g.revoked?'REVOKED':Date.now()>=g.expires_at*1000?'EXPIRED':g.used>=g.max_uses?'QUOTA EXHAUSTED':can?'ACTIVE':'BLOCKED';
+  const phase=g.revoked?'REVOKED':g.used>=g.max_uses?'QUOTA EXHAUSTED':!can&&Date.now()>=g.expires_at*1000?'EXPIRED':can?'ACTIVE':'BLOCKED';
   const el=element('article',undefined,'grant-card');const top=element('div',undefined,'grant-top');top.append(element('strong','Grant #'+g.id),element('span',phase,'grant-state '+(phase==='ACTIVE'?'good':'bad-text')));el.append(top);
   const used=element('div',g.used+' / '+g.max_uses+' used','quota');el.append(used);const bar=element('div',undefined,'quota-track');const fill=element('div');fill.style.width=(100*g.used/g.max_uses)+'%';bar.append(fill);el.append(bar);
   const meta=[['Request','#'+g.request_id],['Asset','#'+g.asset_id],['Requester',g.actor.slice(0,8)+'…'+g.actor.slice(-4)],['Expires (local)',new Date(g.expires_at*1000).toLocaleString()],['Can consume',String(can)],['Revoked',String(g.revoked)]];

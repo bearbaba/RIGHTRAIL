@@ -41,3 +41,20 @@ jobs:
       - run: node scripts/probe-v2-request.mjs
 
       - run: node scripts/probe-fee-write.mjs
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm install --no-save --package-lock=false playwright@1.51.1
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 &
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break; sleep 1; done
+          node scripts/smoke_workspace.mjs

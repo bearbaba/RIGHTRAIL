@@ -23,7 +23,7 @@
     </div>
   </aside>
   <main class="main">
-    <header class="topbar"><div class="breadcrumb"><span>RIGHTRAIL</span><b>/</b><span id="crumb">Explore</span></div><div class="top-actions"><span class="status-pill" id="networkState">Deployment not configured</span><button class="btn btn-quiet" id="walletBtn" type="button">Connect wallet</button></div></header>
+    <header class="topbar"><div class="breadcrumb"><span>RIGHTRAIL V2</span><b>/</b><span id="crumb">Explore</span></div><div class="top-actions"><span class="status-pill" id="networkState">Deployment not configured</span><button class="btn btn-quiet" id="walletBtn" type="button">Connect wallet</button></div></header>
     <div class="content">
       <p id="walletIdentity" class="wallet-identity" role="status">No wallet connected · Permissions belong to the original Requester.</p>
       <div id="notice" class="notice" role="status" aria-live="polite"></div><div class="v2-banner"><span id="config" role="status">Checking V2 deployment…</span><button class="btn btn-outline" data-jump="evidence">Live evidence ↗</button></div><div class="flowbar" aria-label="Authorization lifecycle"><button data-jump="publish">01 <span>Publish</span></button><button data-jump="request">02 <span>AI review</span></button><button data-jump="access">03 <span>Grant</span></button><button data-jump="delivery">04 <span>Deliver</span></button><button data-jump="evidence">05 <span>Verify</span></button></div><div class="v2-activity" id="v2Activity"><div><span class="eyebrow">V2 TRANSACTION / DELIVERY</span><p id="activity" role="status" aria-live="polite">No pending V2 action.</p></div><a id="tx" hidden target="_blank" rel="noopener">Explorer ↗</a><button class="btn btn-outline" id="recheck" disabled>Recheck same transaction</button></div>
@@ -60,7 +60,7 @@
             <label class="field"><span>LOCAL FILE (HASHED IN YOUR BROWSER — NOT UPLOADED)</span><input id="contentFile" type="file" aria-label="Select local file to calculate SHA-256"/><small>Choose your own file to compute its digest locally. This preview does not store or upload it.</small></label>
             <label class="field"><span>CONTENT SHA-256 (LOWERCASE)</span><input id="contentDigest" maxlength="64" pattern="[0-9a-f]{64}" placeholder="64-character digest of the protected bytes" required/><small>Only a digest is committed to GenLayer. Never publish private content in a policy.</small></label>
             <label class="field"><span>USAGE POLICY</span><textarea id="assetPolicy" rows="7" minlength="48" maxlength="1600" required placeholder="Define allowed, denied, attribution and ambiguous uses..."></textarea></label>
-            <div class="form-actions"><button class="btn btn-primary" type="submit">Review & sign policy <span>↗</span></button><button class="btn btn-outline" type="button" id="pilotExample">Load legacy fixture example</button><button class="btn btn-quiet" type="button" id="examplePolicy">Insert sample policy</button></div>
+            <div class="form-actions"><button class="btn btn-primary" type="submit">Review & sign policy <span>↗</span></button><button class="btn btn-outline" type="button" id="pilotExample">Load sample policy</button><button class="btn btn-quiet" type="button" id="examplePolicy" hidden>Insert sample policy</button></div>
           </form></section>
           <section class="panel helper"><span class="eyebrow">POLICY DESIGN</span><h2>Be specific, not legalistic.</h2><p class="muted">Define the uses you allow, the uses you refuse and the conditions for attribution. Unclear requests stay unresolved.</p><div class="hint"><b>Allowed</b><p>Non-commercial education with visible credit.</p></div><div class="hint"><b>Denied</b><p>Paid advertising, resale and model training.</p></div><div class="hint"><b>Review</b><p>Sponsored education or missing attribution details.</p></div><div class="warning-note">Publishing requires the creator wallet, Studionet test GEN and verified contract addresses. Until deployment, the editor is a local draft only.</div></section>
         </div>
@@ -68,14 +68,14 @@
           <div class="panel-head"><div><span class="eyebrow">CREATOR / EXISTING ASSET</span><h2>Update asset policy</h2></div></div>
           <p class="muted">Only the original creator may sign a versioned policy update. It applies to this asset; old requests and receipts remain recorded but cannot grant current access.</p>
           <form id="updatePolicyForm">
-            <label class="field"><span>ASSET ID</span><input id="updateAssetId" type="number" min="1" value="1" required/></label>
+            <label class="field"><span>ASSET ID</span><input id="updateAssetId" type="number" min="1" placeholder="Asset number" required/></label>
             <label class="field"><span>NEW POLICY</span><textarea id="updatePolicyText" rows="5" minlength="48" maxlength="1600" placeholder="Full replacement policy…" required></textarea></label>
             <div class="form-actions">
               <button type="button" class="btn btn-outline" id="videoPolicy">Load educational access policy</button>
               <button type="submit" class="btn btn-primary">Sign policy update ↗</button>
             </div>
           </form>
-          <div id="updatePolicyResult" class="result-slot" role="status">No policy update submitted. Asset #1 remains unchanged until a signed transaction finalizes.</div>
+          <div id="updatePolicyResult" class="result-slot" role="status">No policy update submitted. Changing the demonstrated asset invalidates its existing grants.</div>
         </section>
       </section>
       <section id="request" class="page" hidden>
