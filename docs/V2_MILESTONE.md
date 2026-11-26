@@ -63,3 +63,12 @@ Do not submit the milestone until the real tests above are verified.
 - Asset #2 tx: 0x3c5ad50e8c97c04a821283eabbd5ac952aff696698b730bd2f0c61df163fc257; #3 tx: 0x153c8fb37dbfb27f7a15df245d6883af4aea001ee141ef26f090728e3b0032e4. Both reported FINALIZED/SUCCESS; neither has a recovered matching private fixture. Do not deliver content for them.
 - New server-side synthetic fixture (exact value read back from encrypted Vercel env): expected asset #4, digest f12c180f71b61c4599103941c58378439eadc3107a6cc61802128aa22302511e. It must be registered and verified before access. If the actual ID differs, remap the server-side fixture. Never change a digest to disguise a mismatch.
 - Redis must be dedicated to this project, on the Free plan. Standard KV_REST_API_URL / KV_REST_API_TOKEN or UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN are supported. Do not share TrustGate's store. Readiness indicates configuration only, not a successful concurrency test. No V2 wallet writes through the UI until a matching asset and store are configured.
+
+## Production lifecycle evidence — 26 Nov 2026
+- Request #5: https://rightrail.vercel.app/api/state?op=request&id=5 (finalized PERMIT; asset #4).
+- Grant #1 issue: https://explorer-studio.genlayer.com/tx/0x19e3adb638f88bb118e05ca0c32ae8120592bb921e17f574cb1c84991c036e6c
+- Receipt #1 consume: https://explorer-studio.genlayer.com/tx/0x05b5d4e379bc9085ef948932aab42c07cdd4f4398accae904941fced78af6308
+- Grant #1 revoke: https://explorer-studio.genlayer.com/tx/0x3ada6c1d1c66ae8dd661fb3b7746be67d9c9b40512d8d4906006b2995c87b374
+- All three hashes independently verified FINALIZED/SUCCESS by production API. User observed real protected delivery with exact digest before revocation. Grant retained one unused unit (1/2 used). Live revocation readback asserted in candidate CI.
+- GET /api/v2-access now checks actual Redis PING and matching registered digest. PING alone is not a replay test.
+- Optional Testnet replay test sends four identical signed POSTs concurrently with one signature. PASS requires one HTTP 200 and three HTTP 409 DELIVERY_ALREADY_CLAIMED without content. No persisted signature or new on-chain transaction for the duplicates. Pending actual user-run evidence.

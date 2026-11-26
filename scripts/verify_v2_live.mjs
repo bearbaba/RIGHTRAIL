@@ -24,3 +24,9 @@ for(const [address,file,required] of [[GATE,'contracts/scoped_rights_gate.py',['
 const stats=parse(await read(GATE,'stats')),totals=parse(await read(RIGHTS,'totals'));
 if(String(stats.rights_address).toLowerCase()!==RIGHTS.toLowerCase()||!Number.isSafeInteger(stats.grants)||!Number.isSafeInteger(stats.receipts)||!Number.isSafeInteger(totals.assets)||!Number.isSafeInteger(totals.requests))throw Error('STATE_OR_CONSTRUCTOR_MISMATCH');
 console.log('V2_LIVE_VERIFIED '+JSON.stringify({chainId:61999,gate:GATE,rights:RIGHTS,stats,totals,latestFinal:true}));
+
+// Read-only regression proof for the real Grant #1 lifecycle, not a simulated receipt.
+const g1=parse(await read(GATE,'get_grant',[1])),r1=parse(await read(GATE,'get_receipt',[1]));
+const allowed=await read(GATE,'can_consume',[1,g1.actor]),deliverable=await read(GATE,'can_deliver',[1,g1.actor]);
+if(g1.request_id!==5||g1.asset_id!==4||g1.revoked!==true||g1.used!==1||g1.max_uses!==2||r1.grant_id!==1||r1.use_number!==1||allowed!==false||deliverable!==false)throw Error('LIVE_GRANT_ONE_REVOCATION_MISMATCH');
+console.log('LIVE_GRANT_ONE_REVOCATION_VERIFIED '+JSON.stringify({grant:g1,receipt:r1,canConsume:allowed,canDeliver:deliverable}));

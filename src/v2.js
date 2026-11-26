@@ -140,11 +140,22 @@ $('deliver').onclick=()=>run(async()=>{
   if(Date.now()-Number(p.message.split('\n')[6].slice(7))>1200000){clear(proofKey);throw Error('Proof expired; consumed quota cannot be restored')}
   resetContent();
   const signature=await window.ethereum.request({method:'personal_sign',params:[encodePersonalSignMessage(p.message),actor]});
-  const r=await fetch('/api/v2-access',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message:p.message,signature})});
-  const b=await r.json();
-  if(!r.ok||!b.ok){if(r.status===409)clear(proofKey);throw Error(b.error||'Delivery blocked')}
+  const replay=$('replayTest').checked;
+  const body=JSON.stringify({message:p.message,signature});
+  const send=async()=>{const r=await fetch('/api/v2-access',{method:'POST',headers:{'content-type':'application/json'},body,cache:'no-store'});return {status:r.status,data:await r.json()}};
+  const results=await Promise.allSettled(Array.from({length:replay?4:1},send));
+  const received=results.filter(x=>x.status==='fulfilled').map(x=>x.value);
+  const accepted=received.filter(x=>x.status===200&&x.data.ok===true);
+  const blocked=received.filter(x=>x.status===409&&x.data.error==='DELIVERY_ALREADY_CLAIMED'&&!Object.hasOwn(x.data,'content'));
+  if(replay){
+    const passed=accepted.length===1&&blocked.length===3;
+    $('replayResult').textContent=JSON.stringify({receiptId:p.receipt,attempts:4,accepted:accepted.length,replayBlocked:blocked.length,results:results.map(x=>x.status==='fulfilled'?{status:x.value.status,result:x.value.data.ok?'DELIVERED':x.value.data.error,containsContent:Object.hasOwn(x.value.data,'content')}:{status:'NETWORK_ERROR'}),result:passed?'PASS':'NOT VERIFIED'},null,2);
+  }
+  if(accepted.length!==1){if(blocked.length)clear(proofKey);throw Error(accepted.length>1?'SECURITY FAILURE: multiple deliveries':received[0]?.data?.error||'Delivery blocked or unavailable')}
+  const b=accepted[0].data;
   if(b.receiptId!==p.receipt||b.grantId!==p.grant||await hash(b.content)!==b.digest)throw Error('Delivery response binding mismatch');
-  clear(proofKey);$('content').textContent=b.content;status('ACCESS DELIVERED · receipt '+b.receiptId+' · exact SHA-256 verified.');
+  clear(proofKey);$('content').textContent=b.content;status('ACCESS DELIVERED · receipt '+b.receiptId+' · exact SHA-256 verified.'+(replay?' · replay test: '+(blocked.length===3?'PASS':'NOT VERIFIED'):''));
+
 });
 $('recheck').onclick=()=>run(recheck);
 window.ethereum?.on?.('accountsChanged',()=>{actor=null;resetContent();buttons()});
