@@ -122,14 +122,18 @@ $('revoke').onclick=()=>run(async()=>{
   await write('revoke_grant',[n]);
 });
 $('consume').onclick=()=>run(async()=>{
-  const n=id($('grantId').value);await signer();resetContent();
+  const n=id($('grantId').value);await signer();
   const old=load(proofKey);
   if(old){
     const issued=Number(old.message?.split('\n')[6]?.slice(7));
     if(Number.isFinite(issued)&&Date.now()-issued>1200000)clear(proofKey);
     else throw Error('A delivery proof already exists. Deliver it before consuming another grant, or wait for expiry.');
   }
-  if(await read(config.gate,'can_consume',[n,actor])!==true)throw Error('Grant unavailable for this wallet');
+  if(await read(config.gate,'can_consume',[n,actor])!==true){
+    const g=await grant(n);
+    throw Error(g.actor!==actor?'WRONG_REQUESTER · no transaction sent':g.revoked?'GRANT_REVOKED · no transaction sent':g.used>=g.max_uses?'QUOTA_EXHAUSTED · no transaction sent':Date.now()>=g.expires_at*1000?'GRANT_EXPIRED · no transaction sent':'GRANT_UNAVAILABLE · no transaction sent');
+  }
+  resetContent();
   const message=['RIGHTRAIL V2 ACCESS','Host:'+location.host,'Chain:61999','Gate:'+config.gate,
     'Grant:'+n,'Actor:'+actor,'Issued:'+Date.now(),'Nonce:'+hex(crypto.getRandomValues(new Uint8Array(32)))].join('\n');
   await write('consume_access',[n,await hash(message)],message);
@@ -166,7 +170,7 @@ async function init(){
     if(!r.ok||!b.ok||b.chainId!==chain||!address(b.gate)||!address(b.rights)||!Array.isArray(b.assetIds))throw Error(b.error||'V2 not configured');
     const details=(b.assets||[]).map(a=>'Asset #'+a.id+' · '+(a.verified?'SHA-256 VERIFIED':'AWAITING MATCHING ON-CHAIN ASSET')+' · '+a.digest).join(' | ');
     config=b.ready===true?b:null;
-    $('config').textContent=(config?'V2 CONFIGURED':'V2 LOCKED')+' · contract link verified · '+(b.storeOnline?'Redis PING verified; replay test pending':b.storeConfigured?'Redis not responding':'Delivery store missing')+' · '+details;
+    $('config').textContent=(config?'V2 CONFIGURED':'V2 LOCKED')+' · contract link verified · '+(b.storeOnline?'Redis PING verified; optional replay test below':b.storeConfigured?'Redis not responding':'Delivery store missing')+' · '+details;
     $('config').dataset.ready=config?'true':'false';
   }catch(e){$('config').textContent='V2 LOCKED · '+(e?.message||'configuration unavailable')+' · No transaction will be sent.';$('config').dataset.ready='false'}
   const p=load(key);if(p?.tx){link(p.tx);status('Saved transaction. Recheck same hash before any new action.')}

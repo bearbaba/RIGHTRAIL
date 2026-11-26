@@ -4,6 +4,17 @@
 
 RIGHTRAIL is an open-source GenLayer Studionet dApp that links creator-declared, versioned usage policies to **consequential access to a protected synthetic resource**. A requester signs a usage request; a GenLayer Intelligent Contract independently adjudicates `PERMIT`, `DENY`, or `REVIEW` through comparative AI consensus. A separate Gate contract performs a fresh cross-contract permit check before persisting a wallet-bound access receipt. The protected-content API verifies live permission, matching receipt, an EIP-191 wallet signature, and the exact content SHA-256.
 
+## V2 — scoped grants and one-time delivery (Studionet)
+
+[Live V2 console](https://rightrail.vercel.app/v2.html) · [V2 evidence and limitations](docs/V2_MILESTONE.md) · [ScopedRightsGate source](contracts/scoped_rights_gate.py)
+
+V2 extends the original AI permit with creator-issued per-request grants, bounded TTL and quota, atomic on-chain challenge receipts, selective revocation, and wallet-bound one-time delivery using Redis SET NX. It preserves the existing AI adjudication and does not replace it with a second AI judge.
+
+- Grant #1: issued from PERMIT #5; one of two uses consumed; content delivered; revoked while one unit remained. Independent latest-final reads verified both consumption and delivery denied after revocation.
+- Grant #2: issued from PERMIT #6; one of one uses consumed. User-run production replay test observed one HTTP 200 and three HTTP 409 responses, with no content in blocked responses. On-chain issue and consume transactions independently verified.
+- Remaining live tests include expiry and distinct requester/asset isolation. Both demonstrated grants use the same requester. V2 one-time delivery assumes durable Redis claim retention and does not revoke already downloaded bytes.
+- The original video below is V1, not the V2 demo.
+
 ## Try it / reviewer links
 
 - **App:** https://rightrail.vercel.app/

@@ -30,3 +30,11 @@ const g1=parse(await read(GATE,'get_grant',[1])),r1=parse(await read(GATE,'get_r
 const allowed=await read(GATE,'can_consume',[1,g1.actor]),deliverable=await read(GATE,'can_deliver',[1,g1.actor]);
 if(g1.request_id!==5||g1.asset_id!==4||g1.revoked!==true||g1.used!==1||g1.max_uses!==2||r1.grant_id!==1||r1.use_number!==1||allowed!==false||deliverable!==false)throw Error('LIVE_GRANT_ONE_REVOCATION_MISMATCH');
 console.log('LIVE_GRANT_ONE_REVOCATION_VERIFIED '+JSON.stringify({grant:g1,receipt:r1,canConsume:allowed,canDeliver:deliverable}));
+
+// Stable quota assertion: this grant was issued with one use and consumed once.
+const g2=parse(await read(GATE,'get_grant',[2])),r2=parse(await read(GATE,'get_receipt',[2]));
+const quotaAllowed=await read(GATE,'can_consume',[2,g2.actor]);
+const wrongWalletDelivery=await read(GATE,'can_deliver',[2,g2.owner]);
+const correctWalletDelivery=await read(GATE,'can_deliver',[2,g2.actor]);
+if(g2.request_id!==6||g2.asset_id!==4||g2.used!==1||g2.max_uses!==1||r2.grant_id!==2||r2.actor!==g2.actor||r2.use_number!==1||r2.challenge_sha256!=='9044fac73d307b512f29c2ada530025cce8e0df23b7c2203063599171cf6a1ba'||quotaAllowed!==false||wrongWalletDelivery!==false)throw Error('LIVE_GRANT_TWO_QUOTA_MISMATCH');
+console.log('LIVE_GRANT_TWO_QUOTA_VERIFIED '+JSON.stringify({grant:g2,receipt:r2,canConsume:quotaAllowed,wrongWalletDelivery,correctWalletDelivery,observedAt:new Date().toISOString()}));

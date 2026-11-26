@@ -1,4 +1,4 @@
-# RIGHTRAIL V2 — release candidate, NOT a verified live milestone
+# RIGHTRAIL V2 — live lifecycle evidence and remaining verification
 
 Baseline: main commit 4fa0b1cfdf0a1cf9ac1a06d1a8e85cf567f39737.
 The existing AI-adjudicated RightsRail and legacy Access Gate are preserved.
@@ -33,7 +33,7 @@ expiry separately. The content server does not certify legal ownership or DRM.
    GET /api/v2-access verifies configuration, network and contract linkage; it
    does not prove Redis health. Open /v2.html and use explicit wallet actions.
 
-## Evidence matrix (not yet run on-chain)
+## Original evidence matrix (see subsequent evidence for completed checks)
 - Creator, requester A, requester B, one shared asset, distinct PERMIT requests.
 - DENY and REVIEW: grant issuance fails, no grant ID recorded.
 - Issue two grants for same asset; owner-only issuance and revoke.
@@ -54,7 +54,7 @@ is enforced at the latest finalized read, not at an impossible instantaneous ato
 boundary across blockchain, Redis and HTTP. Already downloaded content cannot be
 recalled. No seed phrase, private key, token approvals, Mainnet or new paid service.
 Existing MetaMask warning must be resolved; never bypass a security warning.
-Do not submit the milestone until the real tests above are verified.
+Before submission, disclose any tests in this matrix that remain unverified.
 
 ## Deployment and asset evidence (2026-11-26)
 - V2 gate: 0xfaf2E73666CBBa767790c0Dc84BB838446b23Df3.
@@ -71,4 +71,13 @@ Do not submit the milestone until the real tests above are verified.
 - Grant #1 revoke: https://explorer-studio.genlayer.com/tx/0x3ada6c1d1c66ae8dd661fb3b7746be67d9c9b40512d8d4906006b2995c87b374
 - All three hashes independently verified FINALIZED/SUCCESS by production API. User observed real protected delivery with exact digest before revocation. Grant retained one unused unit (1/2 used). Live revocation readback asserted in candidate CI.
 - GET /api/v2-access now checks actual Redis PING and matching registered digest. PING alone is not a replay test.
-- Optional Testnet replay test sends four identical signed POSTs concurrently with one signature. PASS requires one HTTP 200 and three HTTP 409 DELIVERY_ALREADY_CLAIMED without content. No persisted signature or new on-chain transaction for the duplicates. Pending actual user-run evidence.
+- Optional Testnet replay test sends four identical signed POSTs concurrently with one signature. PASS requires one HTTP 200 and three HTTP 409 DELIVERY_ALREADY_CLAIMED without content. No persisted signature or new on-chain transaction for the duplicates. Actual user-run result recorded below.
+
+## Grant #2 and concurrent replay — 26 Nov 2026
+- Request #6: https://rightrail.vercel.app/api/state?op=request&id=6 (PERMIT, asset #4, same requester as #5).
+- Grant #2 issue: https://explorer-studio.genlayer.com/tx/0xecdd8cae0e5f3b3fc77b74c4b5f379242c31b8196bb1f4d446a0adab01d44c76
+- Receipt #2 consume: https://explorer-studio.genlayer.com/tx/0xe64c8caba7d13f3732407849f5d284a07aa13d4c0fc63c24e1231dec9ff1419d
+- Both hashes independently confirmed FINALIZED/SUCCESS through production API. Grant #2 max_uses=1, used=1; receipt #2 use_number=1.
+- **Observed user-run production replay test** (browser output, not an independent server-side log export): one signed proof submitted four times concurrently. Responses in submission order: 409 DELIVERY_ALREADY_CLAIMED (no content), 200 DELIVERED (content), 409 DELIVERY_ALREADY_CLAIMED (no content), 409 DELIVERY_ALREADY_CLAIMED (no content). Result PASS; exact SHA-256 verified by client. Production commit 22d953320ba0fb62846502db61f460a11ad3b859.
+- Grant #1 independent revocation proof: https://github.com/bearbaba/RIGHTRAIL/actions/runs/45761302875 (canConsume=false, canDeliver=false).
+- Remaining: live expiry proof independent of revocation/quota; separate-requester and separate-asset isolation; live negative DENY/REVIEW and duplicate challenge. Unit tests are not equivalent to those live tests. No mainnet, DRM or legal ownership guarantees.
