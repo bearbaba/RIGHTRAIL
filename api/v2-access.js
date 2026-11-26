@@ -1,3 +1,4 @@
+import {getAddress} from 'viem';
 import {createClient} from 'genlayer-stable';
 import {studionet} from 'genlayer-stable/chains';
 import {TransactionHashVariant} from 'genlayer-stable/types';
@@ -39,7 +40,7 @@ async function checkNetwork(){
 }
 const client=createClient({chain:studionet});
 const read=(address,functionName,args=[])=>client.readContract({
-  address,functionName,args,transactionHashVariant:TransactionHashVariant.LATEST_FINAL});
+  address:getAddress(address),functionName,args,transactionHashVariant:TransactionHashVariant.LATEST_FINAL});
 let pingCache={at:0,ok:false};
 async function storeReachable(){
   if(!storeConfigured())return false;
@@ -81,7 +82,7 @@ export default async function handler(req,res){
   try{
     const stats=parse(await read(gate,'stats'));
     if(String(stats?.rights_address||'').toLowerCase()!==rights)return fail(503,'V2_CONTRACT_LINK_MISMATCH');
-  }catch{return fail(503,'V2_CONTRACT_READ_UNAVAILABLE')}
+  }catch(e){console.warn('V2 contract stats read failed',String(e?.message||'RPC failure').slice(0,240));return fail(503,'V2_CONTRACT_READ_UNAVAILABLE')}
   if(req.method==='GET'){
     const assets=await Promise.all(Object.entries(content).map(async ([id,value])=>{
       const digest=sha256(value);

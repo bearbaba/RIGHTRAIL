@@ -1,4 +1,5 @@
 import './v2.css';
+import {getAddress} from 'viem';
 import {createClient} from 'genlayer-stable';
 import {studionet} from 'genlayer-stable/chains';
 import {TransactionHashVariant} from 'genlayer-stable/types';
@@ -12,7 +13,7 @@ const parse=x=>typeof x==='string'?JSON.parse(x):x;
 const id=s=>{const n=Number(s);if(!Number.isSafeInteger(n)||n<1||n>99999999)throw Error('Enter a valid ID');return n};
 let config=null,actor=null,busy=false;
 const reader=createClient({chain:studionet});
-const read=(address,functionName,args=[])=>reader.readContract({address,functionName,args,transactionHashVariant:TransactionHashVariant.LATEST_FINAL});
+const read=(address,functionName,args=[])=>reader.readContract({address:getAddress(address),functionName,args,transactionHashVariant:TransactionHashVariant.LATEST_FINAL});
 function status(msg){$('activity').textContent=msg}
 function stash(k,v){sessionStorage.setItem(k,JSON.stringify(v))}
 function load(k){try{return JSON.parse(sessionStorage.getItem(k)||'null')}catch{return null}}
@@ -89,7 +90,7 @@ async function write(method,args,message=null){
   // Test that recovery storage is available before signing.
   stash(key,{preparing:true});clear(key);
   status('Review '+method+' in your wallet. No automatic approval.');
-  const tx=await client.writeContract({address:config.gate,functionName:method,args,value:0n});
+  const tx=await client.writeContract({address:getAddress(config.gate),functionName:method,args,value:0n});
   if(!/^0x[0-9a-fA-F]{64}$/.test(tx||''))throw Error('No valid transaction hash returned');
   link(tx);status('Submitted: '+tx+'. Save this hash. Waiting for finalized readback.');
   stash(key,{tx,method,args,message,actor:owner,gate:config.gate});
