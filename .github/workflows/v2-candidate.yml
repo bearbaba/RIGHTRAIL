@@ -37,3 +37,5 @@ jobs:
           node-version: 22
       - run: npm install --no-audit --no-fund
       - run: node scripts/verify_v2_live.mjs
+
+      - run: node scripts/probe-v2-request.mjs
