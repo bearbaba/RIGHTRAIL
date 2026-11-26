@@ -43,7 +43,7 @@ jobs:
       - run: node scripts/probe-fee-write.mjs
 
   browser-smoke:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
