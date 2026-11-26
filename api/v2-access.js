@@ -40,6 +40,19 @@ async function checkNetwork(){
 const client=createClient({chain:studionet});
 const read=(address,functionName,args=[])=>client.readContract({
   address,functionName,args,transactionHashVariant:TransactionHashVariant.LATEST_FINAL});
+let pingCache={at:0,ok:false};
+async function storeReachable(){
+  if(!storeConfigured())return false;
+  if(Date.now()-pingCache.at<60000)return pingCache.ok;
+  let ok=false;
+  try{
+    const r=await fetch(redis,{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify(['PING']),signal:AbortSignal.timeout(5000)});
+    const j=await r.json();
+    ok=r.ok&&j.result==='PONG';
+  }catch{}
+  pingCache={at:Date.now(),ok};
+  return ok;
+}
 async function claim(key){
   const r=await fetch(redis,{method:'POST',headers:{
     authorization:'Bearer '+token,'content-type':'application/json'},
@@ -58,14 +71,17 @@ export default async function handler(req,res){
   const fail=(status,error)=>res.status(status).json({ok:false,error});
   if(!['GET','POST'].includes(req.method))return fail(405,'METHOD_NOT_ALLOWED');
   let content;
+  try{content=contentMap()}catch{return fail(503,'V2_CONTENT_CONFIG_INVALID')}
+  if(!addr(gate)||!addr(rights)||!host||!Object.keys(content).length)return fail(503,'V2_CONFIG_MISSING');
+  // Public GET contains only safe readiness metadata; POST must match the canonical host.
+  if(req.method==='POST'&&req.headers.host!==host)return fail(403,'V2_HOST_MISMATCH');
   try{
-    content=contentMap();
-    if(!addr(gate)||!addr(rights)||!host||req.headers.host!==host||
-       !Object.keys(content).length)throw Error('Config missing');
-    if(!await checkNetwork())throw Error('Wrong network');
+    if(!await checkNetwork())return fail(503,'V2_NETWORK_UNVERIFIED');
+  }catch{return fail(503,'V2_NETWORK_UNAVAILABLE')}
+  try{
     const stats=parse(await read(gate,'stats'));
-    if(stats.rights_address!==rights)throw Error('Wrong rights deployment');
-  }catch{return fail(503,'V2_NOT_READY');}
+    if(String(stats?.rights_address||'').toLowerCase()!==rights)return fail(503,'V2_CONTRACT_LINK_MISMATCH');
+  }catch{return fail(503,'V2_CONTRACT_READ_UNAVAILABLE')}
   if(req.method==='GET'){
     const assets=await Promise.all(Object.entries(content).map(async ([id,value])=>{
       const digest=sha256(value);
@@ -76,8 +92,9 @@ export default async function handler(req,res){
       }catch{return {id:Number(id),digest,registered:false,verified:false};}
     }));
     const assetIds=assets.filter(x=>x.verified).map(x=>x.id);
+    const storeOnline=assetIds.length>0&&await storeReachable();
     return res.status(200).json({ok:true,gate,rights,chainId:61999,assetIds,assets,
-      storeConfigured:storeConfigured(),ready:storeConfigured()&&assetIds.length>0});
+      storeConfigured:storeConfigured(),storeOnline,ready:storeOnline&&assetIds.length>0});
   }
   if(!storeConfigured())return fail(503,'DELIVERY_STORE_NOT_CONFIGURED');
   let proof;
