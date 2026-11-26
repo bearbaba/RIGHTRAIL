@@ -9,8 +9,10 @@ const parse=x=>typeof x==='string'?JSON.parse(x):x;
 const gate=(process.env.RIGHTRAIL_V2_GATE_ADDRESS||'').toLowerCase();
 const rights=(process.env.RIGHTRAIL_RIGHTS_ADDRESS||'').toLowerCase();
 const host=process.env.RIGHTRAIL_V2_HOST||'';
-const redis=process.env.RIGHTRAIL_V2_REDIS_URL||'';
-const token=process.env.RIGHTRAIL_V2_REDIS_TOKEN||'';
+// Accept standard Upstash integration variables only as a paired fallback.
+const redis=process.env.RIGHTRAIL_V2_REDIS_URL||process.env.KV_REST_API_URL||process.env.UPSTASH_REDIS_REST_URL||'';
+const token=process.env.RIGHTRAIL_V2_REDIS_TOKEN||process.env.KV_REST_API_TOKEN||process.env.UPSTASH_REDIS_REST_TOKEN||'';
+const storeConfigured=()=>/^https:\/\/[a-z0-9-]+\.upstash\.io\/?$/.test(redis)&&Boolean(token);
 
 function contentMap(){
   const x=JSON.parse(process.env.RIGHTRAIL_V2_CONTENT_JSON||'{}');
@@ -55,13 +57,25 @@ export default async function handler(req,res){
   try{
     content=contentMap();
     if(!addr(gate)||!addr(rights)||!host||req.headers.host!==host||
-       !/^https:\/\/[a-z0-9-]+\.upstash\.io\/?$/.test(redis)||!token||
        !Object.keys(content).length)throw Error('Config missing');
     if(!await checkNetwork())throw Error('Wrong network');
     const stats=parse(await read(gate,'stats'));
     if(stats.rights_address!==rights)throw Error('Wrong rights deployment');
   }catch{return fail(503,'V2_NOT_READY');}
-  if(req.method==='GET')return res.status(200).json({ok:true,gate,rights,chainId:61999,assetIds:Object.keys(content).map(Number)});
+  if(req.method==='GET'){
+    const assets=await Promise.all(Object.entries(content).map(async ([id,value])=>{
+      const digest=sha256(value);
+      try {
+        const asset=parse(await read(rights,'get_asset',[Number(id)]));
+        return {id:Number(id),digest,registered:asset?.id===Number(id),
+          verified:asset?.id===Number(id)&&asset.active===true&&asset.content_sha256===digest};
+      }catch{return {id:Number(id),digest,registered:false,verified:false};}
+    }));
+    const assetIds=assets.filter(x=>x.verified).map(x=>x.id);
+    return res.status(200).json({ok:true,gate,rights,chainId:61999,assetIds,assets,
+      storeConfigured:storeConfigured(),ready:storeConfigured()&&assetIds.length>0});
+  }
+  if(!storeConfigured())return fail(503,'DELIVERY_STORE_NOT_CONFIGURED');
   let proof;
   try{proof=await verifyV2Proof(req.body?.message,req.body?.signature,{host,gate});}
   catch{return fail(401,'INVALID_WALLET_PROOF');}

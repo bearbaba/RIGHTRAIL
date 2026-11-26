@@ -55,3 +55,11 @@ boundary across blockchain, Redis and HTTP. Already downloaded content cannot be
 recalled. No seed phrase, private key, token approvals, Mainnet or new paid service.
 Existing MetaMask warning must be resolved; never bypass a security warning.
 Do not submit the milestone until the real tests above are verified.
+
+## Deployment and asset evidence (2026-11-26)
+- V2 gate: 0xfaf2E73666CBBa767790c0Dc84BB838446b23Df3.
+- Deployment: 0x9086b548676cf35bf5d0cb386e81717ae78ac117afbe16ab75a5590d81e420b4 (user-supplied Explorer evidence: FINALIZED/SUCCESS).
+- Independent live source (normalized line endings/trailing whitespace), schema and constructor: https://github.com/bearbaba/RIGHTRAIL/actions/runs/45750184145 . Latest-final grants=0, receipts=0 at readback.
+- Asset #2 tx: 0x3c5ad50e8c97c04a821283eabbd5ac952aff696698b730bd2f0c61df163fc257; #3 tx: 0x153c8fb37dbfb27f7a15df245d6883af4aea001ee141ef26f090728e3b0032e4. Both reported FINALIZED/SUCCESS; neither has a recovered matching private fixture. Do not deliver content for them.
+- New server-side synthetic fixture (exact value read back from encrypted Vercel env): expected asset #4, digest f12c180f71b61c4599103941c58378439eadc3107a6cc61802128aa22302511e. It must be registered and verified before access. If the actual ID differs, remap the server-side fixture. Never change a digest to disguise a mismatch.
+- Redis must be dedicated to this project, on the Free plan. Standard KV_REST_API_URL / KV_REST_API_TOKEN or UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN are supported. Do not share TrustGate's store. Readiness indicates configuration only, not a successful concurrency test. No V2 wallet writes through the UI until a matching asset and store are configured.

@@ -147,8 +147,10 @@ async function init(){
   try{
     const r=await fetch('/api/v2-access',{cache:'no-store'}),b=await r.json();
     if(!r.ok||!b.ok||b.chainId!==chain||!address(b.gate)||!address(b.rights)||!Array.isArray(b.assetIds))throw Error('V2 not configured');
-    config=b;$('config').textContent='Gate configured · '+b.gate+' · delivery store not yet live-tested';
-    $('config').dataset.ready='true';
+    const details=(b.assets||[]).map(a=>'Asset #'+a.id+' · '+(a.verified?'SHA-256 VERIFIED':'AWAITING MATCHING ON-CHAIN ASSET')+' · '+a.digest).join(' | ');
+    config=b.ready===true?b:null;
+    $('config').textContent=(config?'V2 CONFIGURED':'V2 LOCKED')+' · contract link verified · '+(b.storeConfigured?'Delivery store configured (live replay test pending)':'Delivery store missing')+' · '+details;
+    $('config').dataset.ready=config?'true':'false';
   }catch{$('config').textContent='V2 LOCKED · deployment, protected assets and durable delivery store required. No transaction will be sent.';$('config').dataset.ready='false'}
   const p=load(key);if(p?.tx){link(p.tx);status('Saved transaction. Recheck same hash before any new action.')}
   buttons();
