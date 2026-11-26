@@ -12,8 +12,8 @@ V2 extends the original AI permit with creator-issued per-request grants, bounde
 
 - Grant #1: issued from PERMIT #5; one of two uses consumed; content delivered; revoked while one unit remained. Independent latest-final reads verified both consumption and delivery denied after revocation.
 - Grant #2: issued from PERMIT #6; one of one uses consumed. User-run production replay test observed one HTTP 200 and three HTTP 409 responses, with no content in blocked responses. On-chain issue and consume transactions independently verified.
-- Grant #3: distinct requester B received the same asset after Grant #1 was revoked. Actual expiry is 2026-11-26T06:43:25Z; one of two uses remains. Cross-wallet read-only checks and post-expiry verification are tracked in the V2 evidence document. Remaining live tests include expiry and separate-asset isolation. V2 one-time delivery assumes durable Redis claim retention and does not revoke already downloaded bytes.
-- The original video below is V1, not the V2 demo.
+- Grant #3: distinct requester B received the same asset after Grant #1 was revoked. Actual expiry is 2026-11-26T06:43:25Z; one of two uses remains. Independent latest-final checks before and after expiry verified cross-wallet denial and expiry despite one unused quota unit and a current AI permit. See [CI post-expiry readback](https://github.com/bearbaba/RIGHTRAIL/actions/runs/45765958498). Separate-asset isolation and additional live negative tests remain unverified. V2 one-time delivery assumes durable Redis claim retention and does not revoke already downloaded bytes.
+- **V2 edited milestone demo:** https://youtu.be/bW1aYiJu6HI — unified workspace, historical replay evidence and live grant lifecycle readback. The original video below is V1.
 
 ## Try it / reviewer links
 
@@ -25,7 +25,7 @@ V2 extends the original AI permit with creator-issued per-request grants, bounde
 - **RightsAccessGate:** `0xCA57aF8cEe6d83029700A859cBaf93506839364E` — https://explorer-studio.genlayer.com/address/0xCA57aF8cEe6d83029700A859cBaf93506839364E
 - **Source:** [contracts/rights_rail.py](contracts/rights_rail.py), [contracts/access_gate.py](contracts/access_gate.py), [src/main.js](src/main.js), [api/](api/)
 
-## Real signed application workflow
+## Original V1 signed application workflow
 
 1. Creator publishes Asset #1, **Aurora Education Pack**, including a local SHA-256 and an on-chain policy. The creator subsequently signs policy revisions; the current demonstrated version is **v3**.
 2. A **different requester wallet** signs a detailed noncommercial educational-use request (Request **#4**) under policy v3.
@@ -39,7 +39,7 @@ The edited demo shows the persisted request, consensus verdict, receipt and prot
 
 Ordinary deterministic contracts cannot reliably interpret open-ended use clauses, attribution plans and exceptional cases. RightsRail locks the written policy and request version, has independent validators interpret the same inputs through GenLayer comparative consensus, and persists a decision that controls a separate on-chain Gate and a real backend response. This is a use-specific permission and access workflow, **not** a general web-page classifier.
 
-## Policy revision and conservative denials
+## Original V1 policy revision and conservative denials
 
 - Only the asset's creator wallet may call `update_policy` or `retire_asset`.
 - Changing the asset's version invalidates every older request, even one historically marked PERMIT. Existing receipts remain archived but lose authority.
@@ -47,6 +47,10 @@ Ordinary deterministic contracts cannot reliably interpret open-ended use clause
 - DENY and REVIEW do not grant permission. No contract monitors future user compliance, and changes are **asset-wide**, not selective per-user revocations.
 
 ## Tests and reproducible evidence
+
+- [V2 unified workspace, browser smoke and independent expiry verification](https://github.com/bearbaba/RIGHTRAIL/actions/runs/45765958498)
+
+Historical V1 evidence:
 
 - [Current CI — 19/19 JavaScript tests and build](https://github.com/bearbaba/RIGHTRAIL/actions/runs/41067255581)
 - [Deployed RightsRail + Gate schemas/source/constructor linked and read back](https://github.com/bearbaba/RIGHTRAIL/actions/runs/41051709427)
