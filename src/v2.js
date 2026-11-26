@@ -93,7 +93,11 @@ async function write(method,args,message=null){
   if(!/^0x[0-9a-fA-F]{64}$/.test(tx||''))throw Error('No valid transaction hash returned');
   link(tx);status('Submitted: '+tx+'. Save this hash. Waiting for finalized readback.');
   stash(key,{tx,method,args,message,actor:owner,gate:config.gate});
-  await recheck();
+  for(let i=0;i<20&&load(key);i++){
+    try{await recheck()}catch(e){status('Readback unavailable: '+e.message+' · rechecking same hash.')}
+    if(load(key)&&i<19)await new Promise(resolve=>setTimeout(resolve,3500));
+  }
+  if(load(key))status('Still pending or readback unavailable. Recheck the same transaction; do not sign again.');
 }
 $('wallet').onclick=()=>run(connect);
 $('issue').onsubmit=e=>{e.preventDefault();run(async()=>{
@@ -113,7 +117,12 @@ $('revoke').onclick=()=>run(async()=>{
 });
 $('consume').onclick=()=>run(async()=>{
   const n=id($('grantId').value);await signer();resetContent();
-  if(load(proofKey))throw Error('A delivery proof already exists. Deliver it or reload a new session after expiry; do not consume twice.');
+  const old=load(proofKey);
+  if(old){
+    const issued=Number(old.message?.split('\n')[6]?.slice(7));
+    if(Number.isFinite(issued)&&Date.now()-issued>1200000)clear(proofKey);
+    else throw Error('A delivery proof already exists. Deliver it before consuming another grant, or wait for expiry.');
+  }
   if(await read(config.gate,'can_consume',[n,actor])!==true)throw Error('Grant unavailable for this wallet');
   const message=['RIGHTRAIL V2 ACCESS','Host:'+location.host,'Chain:61999','Gate:'+config.gate,
     'Grant:'+n,'Actor:'+actor,'Issued:'+Date.now(),'Nonce:'+hex(crypto.getRandomValues(new Uint8Array(32)))].join('\n');

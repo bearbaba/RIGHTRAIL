@@ -17,3 +17,13 @@ jobs:
       - run: npm run build
       - run: python3 -m py_compile contracts/*.py
       - run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+  unsigned-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/preflight_v2.mjs
