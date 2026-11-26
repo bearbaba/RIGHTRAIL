@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "viem": "2.37.5",
-    "genlayer-stable": "npm:genlayer-js@1.1.8"
+    "genlayer-stable": "npm:genlayer-js@1.1.8",
+    "genlayer-v2": "npm:genlayer-js@2.0.0-rc.2"
   },
   "devDependencies": {
     "vite": "7.1.7"

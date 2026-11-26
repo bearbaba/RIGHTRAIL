@@ -39,3 +39,5 @@ jobs:
       - run: node scripts/verify_v2_live.mjs
 
       - run: node scripts/probe-v2-request.mjs
+
+      - run: node scripts/probe-fee-write.mjs

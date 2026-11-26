@@ -1,4 +1,5 @@
 import './v2.css';
+import {feeClient,prepareFeeWrite} from '../lib/fee-write.js';
 import {getAddress} from 'viem';
 import {createClient} from 'genlayer-stable';
 import {studionet} from 'genlayer-stable/chains';
@@ -43,7 +44,7 @@ async function signer(){
   if(parseInt(chainId,16)!==chain)throw Error('Select GenLayer Studionet 61999 in wallet first');
   const accounts=await window.ethereum.request({method:'eth_accounts'});
   if(accounts?.[0]?.toLowerCase()!==actor)throw Error('Wallet changed; reconnect');
-  return createClient({chain:studionet,account:actor,provider:window.ethereum});
+  return feeClient(actor,window.ethereum);
 }
 function link(tx){$('tx').hidden=false;$('tx').href='https://explorer-studio.genlayer.com/tx/'+tx}
 async function grant(n){
@@ -90,7 +91,11 @@ async function write(method,args,message=null){
   // Test that recovery storage is available before signing.
   stash(key,{preparing:true});clear(key);
   status('Review '+method+' in your wallet. No automatic approval.');
-  const tx=await client.writeContract({address:getAddress(config.gate),functionName:method,args,value:0n});
+  status('Estimating test GEN fee · no transaction sent');
+  const prepared=await prepareFeeWrite(client,config.gate,method,args);
+  if((await window.ethereum.request({method:'eth_accounts'}))?.[0]?.toLowerCase()!==owner||parseInt(await window.ethereum.request({method:'eth_chainId'}),16)!==chain)throw Error('Wallet changed during fee estimation');
+  status('Review '+method+' in your wallet · fee deposit '+prepared.fee+' test GEN');
+  const tx=await client.writeContract(prepared.write);
   if(!/^0x[0-9a-fA-F]{64}$/.test(tx||''))throw Error('No valid transaction hash returned');
   link(tx);status('Submitted: '+tx+'. Save this hash. Waiting for finalized readback.');
   stash(key,{tx,method,args,message,actor:owner,gate:config.gate});

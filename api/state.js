@@ -42,7 +42,12 @@ export default async function handler(req,res){
   else if(op==='hasReceipt'&&validPositiveId(req.query.id)&&addr(req.query.actor))value=await read(GATE,'has_access_receipt',[n,req.query.actor]);
   else if(op==='tx'&&hash(req.query.hash)){
     const t=await client.getTransaction({hash:req.query.hash});
-    if(!t)return res.status(200).json({ok:true,value:{found:false}});
+    if(!t)return res.status(200).json({ok:true,value:{found:false,status:'UNKNOWN',execution:'UNKNOWN'}});
+    if(!t.from_address&&!t.to_address&&!t.consensus_data&&!t.consensusData){
+      const receipt=await fetch(RPC,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',method:'eth_getTransactionReceipt',params:[req.query.hash],id:1}),signal:AbortSignal.timeout(9000)}).then(r=>r.json());
+      const reverted=receipt.result?.status==='0x0'||receipt.result?.status===0;
+      return res.status(200).json({ok:true,value:{found:true,status:reverted?'EVM_REVERTED':'GENLAYER_NOT_INDEXED',execution:reverted?'ERROR':'UNKNOWN'}});
+    }
     const c=t.consensus_data??t.consensusData??{},leader=c.leader_receipt??c.leaderReceipt??null;
     const outcomes=(Array.isArray(leader)?leader:[leader]).filter(Boolean).map(x=>String(x.execution_result??x.executionResult??'UNKNOWN').toUpperCase());
     const explicit=t.txExecutionResultName;let execution='UNKNOWN';

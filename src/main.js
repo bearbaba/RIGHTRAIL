@@ -2,8 +2,7 @@ import './style.css';
 import { encodePersonalSignMessage, walletSignatureIssue } from '../lib/unlock-wallet.js';
 import { requesterWalletStatus } from '../lib/requester-wallet.js';
 import { preparePolicyUpdate, confirmPolicyUpdate } from '../lib/policy-update.js';
-import { createClient } from 'genlayer-stable';
-import { studionet } from 'genlayer-stable/chains';
+import {feeClient,prepareFeeWrite} from '../lib/fee-write.js';
 
 const $ = id => document.getElementById(id);
 const bySel = s => document.querySelector(s);
@@ -130,7 +129,7 @@ async function signer() {
   }
   if(parseInt(await window.ethereum.request({method:'eth_chainId'}),16)!==STUDIO_CHAIN_ID)
     throw new Error('Wallet is not on Studionet 61999. No signature requested.');
-  wallet=createClient({chain:studionet,account,provider:window.ethereum});
+  wallet=feeClient(account,window.ethereum);
   return wallet;
 }
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -281,7 +280,11 @@ async function signWrite(address,functionName,args,verification={}){
   setBusy(true);
   setActivity('Confirm in your wallet','Review the contract method, transaction details and network before signing.','working',1);
   try{
-    const hash=await client.writeContract({address,functionName,args,value:0n});
+    setActivity('Estimating test GEN fee','Unsigned Studio fee simulation. No transaction sent.','working',1);
+    const prepared=await prepareFeeWrite(client,address,functionName,args);
+    if((await window.ethereum.request({method:'eth_accounts'}))?.[0]?.toLowerCase()!==account.toLowerCase()||parseInt(await window.ethereum.request({method:'eth_chainId'}),16)!==61999)throw Error('Wallet changed during fee estimation');
+    setActivity('Confirm in your wallet','Estimated fee deposit: '+prepared.fee+' test GEN. Review and approve only the intended action.','working',1);
+    const hash=await client.writeContract(prepared.write);
     if(!/^0x[0-9a-fA-F]{64}$/.test(hash||''))throw new Error('Wallet did not return a valid transaction hash.');
     const record={hash,functionName,args,actor:account,address,verification,created:Date.now()};
     keepRecord(record);
