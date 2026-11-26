@@ -38,3 +38,12 @@ const wrongWalletDelivery=await read(GATE,'can_deliver',[2,g2.owner]);
 const correctWalletDelivery=await read(GATE,'can_deliver',[2,g2.actor]);
 if(g2.request_id!==6||g2.asset_id!==4||g2.used!==1||g2.max_uses!==1||r2.grant_id!==2||r2.actor!==g2.actor||r2.use_number!==1||r2.challenge_sha256!=='9044fac73d307b512f29c2ada530025cce8e0df23b7c2203063599171cf6a1ba'||quotaAllowed!==false||wrongWalletDelivery!==false)throw Error('LIVE_GRANT_TWO_QUOTA_MISMATCH');
 console.log('LIVE_GRANT_TWO_QUOTA_VERIFIED '+JSON.stringify({grant:g2,receipt:r2,canConsume:quotaAllowed,wrongWalletDelivery,correctWalletDelivery,observedAt:new Date().toISOString()}));
+
+// Independently verify distinct actors, selective revocation and time-based state.
+const g3=parse(await read(GATE,'get_grant',[3])),r3=parse(await read(GATE,'get_receipt',[3]));
+const before=Date.now(),crossConsume=await read(GATE,'can_consume',[3,g1.actor]),crossDeliver=await read(GATE,'can_deliver',[3,g1.actor]),ownConsume=await read(GATE,'can_consume',[3,g3.actor]),ownDeliver=await read(GATE,'can_deliver',[3,g3.actor]),permit3=await read(RIGHTS,'permit_status',[7,g3.actor]),after=Date.now();
+if(g3.request_id!==7||g3.asset_id!==4||g3.actor===g1.actor||g3.revoked!==false||g3.used!==1||g3.max_uses!==2||r3.actor!==g3.actor||r3.grant_id!==3||r3.challenge_sha256!=='033fe683af79f3cc3c054ed8213eb2ac35277df0c2950015e8bb33b5e8a1c368'||crossConsume!==false||crossDeliver!==false||permit3!==true)throw Error('LIVE_GRANT_THREE_ISOLATION_MISMATCH');
+const phase=after<g3.expires_at*1000-10000?'BEFORE_EXPIRY':before>g3.expires_at*1000+10000?'AFTER_EXPIRY':'NEAR_EXPIRY';
+if(phase==='BEFORE_EXPIRY'&&(ownConsume!==true||ownDeliver!==true))throw Error('LIVE_GRANT_THREE_PRE_EXPIRY_MISMATCH');
+if(phase==='AFTER_EXPIRY'&&(ownConsume!==false||ownDeliver!==false))throw Error('LIVE_GRANT_THREE_POST_EXPIRY_MISMATCH');
+console.log('LIVE_GRANT_THREE_ISOLATION_VERIFIED '+JSON.stringify({grant:g3,receipt:r3,crossConsume,crossDeliver,ownConsume,ownDeliver,permit3,phase,observedAt:new Date(after).toISOString()}));

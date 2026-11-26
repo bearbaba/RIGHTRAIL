@@ -12,7 +12,7 @@ V2 extends the original AI permit with creator-issued per-request grants, bounde
 
 - Grant #1: issued from PERMIT #5; one of two uses consumed; content delivered; revoked while one unit remained. Independent latest-final reads verified both consumption and delivery denied after revocation.
 - Grant #2: issued from PERMIT #6; one of one uses consumed. User-run production replay test observed one HTTP 200 and three HTTP 409 responses, with no content in blocked responses. On-chain issue and consume transactions independently verified.
-- Remaining live tests include expiry and distinct requester/asset isolation. Both demonstrated grants use the same requester. V2 one-time delivery assumes durable Redis claim retention and does not revoke already downloaded bytes.
+- Grant #3: distinct requester B received the same asset after Grant #1 was revoked. Actual expiry is 2026-11-26T06:43:25Z; one of two uses remains. Cross-wallet read-only checks and post-expiry verification are tracked in the V2 evidence document. Remaining live tests include expiry and separate-asset isolation. V2 one-time delivery assumes durable Redis claim retention and does not revoke already downloaded bytes.
 - The original video below is V1, not the V2 demo.
 
 ## Try it / reviewer links

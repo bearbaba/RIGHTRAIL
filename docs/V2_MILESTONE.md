@@ -81,3 +81,10 @@ Before submission, disclose any tests in this matrix that remain unverified.
 - **Observed user-run production replay test** (browser output, not an independent server-side log export): one signed proof submitted four times concurrently. Responses in submission order: 409 DELIVERY_ALREADY_CLAIMED (no content), 200 DELIVERED (content), 409 DELIVERY_ALREADY_CLAIMED (no content), 409 DELIVERY_ALREADY_CLAIMED (no content). Result PASS; exact SHA-256 verified by client. Production commit 22d953320ba0fb62846502db61f460a11ad3b859.
 - Grant #1 independent revocation proof: https://github.com/bearbaba/RIGHTRAIL/actions/runs/45761302875 (canConsume=false, canDeliver=false).
 - Remaining: live expiry proof independent of revocation/quota; separate-requester and separate-asset isolation; live negative DENY/REVIEW and duplicate challenge. Unit tests are not equivalent to those live tests. No mainnet, DRM or legal ownership guarantees.
+
+## Distinct requester and expiry test — 26 Nov 2026
+- Request #7: https://rightrail.vercel.app/api/state?op=request&id=7 — PERMIT for requester B, distinct from requester A.
+- Grant #3 issue: https://explorer-studio.genlayer.com/tx/0x5b32710d37f34438ff56e78e6fdc964f3c6c390e8ae019760028e077c97811bf
+- Receipt #3 consume: https://explorer-studio.genlayer.com/tx/0xcd3e11011ab5c2c73036233d834ac748046c36e2f32c79a7624f9bb2d995ac50
+- Both transactions independently confirmed FINALIZED/SUCCESS. User reported ACCESS DELIVERED with exact digest for requester B, while requester A's Grant #1 remained revoked. Grant #3 has one unused unit; actual TTL 3600 seconds, expires 2026-11-26T06:43:25Z. Do not consume remaining quota or revoke during expiry test.
+- Independent read-only regression now checks cross-actor denial and correct actor authorization before/after expiry, with policy still live. Post-expiry evidence remains pending until the actual read is performed after expiry. No claim of simultaneous pre-revocation grants; Grant #3 was issued after Grant #1 revocation.
