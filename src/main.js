@@ -1,4 +1,6 @@
 import './style.css';
+import {workspaceState,subscribe,updateAccount,acquire,release} from '../lib/workspace-state.js';
+const unified=document.body.dataset.workspace==='v2';
 import { encodePersonalSignMessage, walletSignatureIssue } from '../lib/unlock-wallet.js';
 import { requesterWalletStatus } from '../lib/requester-wallet.js';
 import { preparePolicyUpdate, confirmPolicyUpdate } from '../lib/policy-update.js';
@@ -15,7 +17,7 @@ const STUDIO_CHAIN_ID = 61999;
 const PILOT_CONTENT_SHA256 = '2d136099dbe0ae1d822d94716b235b43d026ca70a49812cc25b89dfbe6663b7f';
 const PILOT_POLICY = "Free, non-commercial educational tutorials may use Aurora Education Pack content if the original creator is clearly credited with a visible link. Paid advertising, resale, and AI-model training are explicitly prohibited. Sponsored educational content requires separate manual approval. Any unclear or incomplete use must remain under review.";
 let config = null, account = null, wallet = null, busy = false, currentRequest = 0;
-const pages = ['explore','publish','request','access'];
+const pages = unified?['explore','publish','request','access','delivery','evidence']:['explore','publish','request','access'];
 const title = x => x.charAt(0).toUpperCase() + x.slice(1);
 const hexAddress = x => /^0x[a-fA-F0-9]{40}$/.test(x || '');
 const inputId = s => { const n = Number(s); if (!Number.isSafeInteger(n) || n < 1 || n > 100000000) throw new Error('Enter a valid positive ID.'); return n; };
@@ -26,7 +28,8 @@ function showPage(page, scroll = true) {
   if (!pages.includes(page)) return;
   pages.forEach(x=>$(x).hidden=x!==page);
   document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===page));
-  $('crumb').textContent=title(page);
+  $('crumb').textContent=unified?({explore:'Overview',publish:'Publish asset',request:'Request & AI review',access:'Scoped grants',delivery:'Consume & deliver',evidence:'Audit evidence'}[page]):title(page);
+  document.querySelectorAll('.flowbar [data-jump]').forEach(x=>x.classList.toggle('selected',x.dataset.jump===page));
   if (scroll) window.scrollTo({top:0,behavior:'smooth'});
   if (window.location.hash!=='#'+page) history.replaceState(null,'','#'+page);
 }
@@ -41,7 +44,9 @@ function setActivity(heading, detail, state='idle', stage=0, hash='') {
   if(hash)$('txExplorer').href=explorer+encodeURIComponent(hash);
   $('recheckTx').hidden=!(hash&&state!=='working');
 }
-function setBusy(v){busy=v;document.querySelectorAll('form button[type=submit]').forEach(b=>b.disabled=v);$('unlockBtn').disabled=v;}
+function syncControls(){const locked=busy||!!workspaceState().owner;document.querySelectorAll('form button[type=submit]:not([data-sign])').forEach(b=>b.disabled=locked);if($('unlockBtn'))$('unlockBtn').disabled=locked;$('walletBtn').disabled=locked;}
+function setBusy(v){busy=v;if(!v)release('rights');syncControls();}
+subscribe(syncControls);
 async function api(op, params={}) {
   const url=new URL('/api/state',window.location.origin);
   url.searchParams.set('op',op);
@@ -69,6 +74,7 @@ function checkReady() {
     throw new Error('Studionet deployment is not verified yet. No wallet transaction was sent.');
 }
 function showConnectedWallet() {
+  if(unified)updateAccount(account);
   $('walletBtn').textContent=account
     ? account.slice(0,6)+'…'+account.slice(-4)+' · Disconnect'
     : 'Connect wallet';
@@ -78,7 +84,7 @@ function showConnectedWallet() {
 }
 async function refreshActiveRequest(){
   if($('access').hidden)return;
-  const value=$('lookupRequestId').value||$('gateRequestId').value;
+  const value=$('lookupRequestId').value||$('gateRequestId')?.value;
   if(!value)return;
   try{await lookupRequest(inputId(value))}
   catch(err){$('requestResult').textContent='Could not refresh access for this wallet: '+err.message}
@@ -101,12 +107,12 @@ $('walletBtn').onclick=async()=>{try{await connectWallet()}catch(e){notify(e.mes
 window.ethereum?.on?.('accountsChanged',async accounts=>{
   account=Array.isArray(accounts)&&hexAddress(accounts[0])?accounts[0]:null;
   wallet=null;showConnectedWallet();
-  $('unlockResult').textContent='Account changed. Unlock requires a new proof from the Requester account.';
+  if($('unlockResult'))$('unlockResult').textContent='Account changed. Unlock requires a new proof from the Requester account.';
   notify(account?'Wallet account switched to '+account+'. Rechecking access.':'Wallet disconnected. Connect the Requester account.','info');
   await refreshActiveRequest();
 });
 window.ethereum?.on?.('chainChanged',()=>{
-  wallet=null;
+  wallet=null;if(unified){account=null;showConnectedWallet();}
   notify('Wallet network changed. Select GenLayer Studionet (61999) before a new on-chain transaction.','info');
 });
 async function signer() {
@@ -140,7 +146,7 @@ async function loadTotals(){
     const a=parse(raw.rights),g=parse(raw.gate);
     $('assetsCount').textContent=a.assets;
     $('requestsCount').textContent=a.requests;
-    $('receiptsCount').textContent=g.receipts;
+    if($('receiptsCount'))$('receiptsCount').textContent=g.receipts;
   }catch(e){notify('Finalized counts unavailable: '+e.message,'error')}
 }
 function infoRow(label,value,tone='normal'){const glyph=tone==='denied'?'×':tone==='neutral'?'•':'✓';return '<div class="step-row '+(tone==='denied'?'step-denied':tone==='neutral'?'step-neutral':'')+'"><span class="step-glyph">'+glyph+'</span><div><b>'+escape(label)+'</b><p>'+escape(value)+'</p></div></div>'}
@@ -206,7 +212,7 @@ async function verifyRecord(record){
     for(let i=totals.requests;i>totals.requests-limit;i--){
       const req=parse(await api('request',{id:i}));
       if(req.requester===actor.toLowerCase()&&req.asset_id===args[0]&&req.usage===args[1]&&req.attribution===args[2]){
-        currentRequest=i;['decisionRequestId','lookupRequestId','gateRequestId'].forEach(x=>$(x).value=i);
+        currentRequest=i;['decisionRequestId','lookupRequestId','gateRequestId','requestId'].forEach(x=>{if($(x))$(x).value=i});
         return {id:i,message:'Request #'+i+' confirmed in finalized storage'};
       }
     }
@@ -226,7 +232,7 @@ async function verifyRecord(record){
   return null;
 }
 async function followTransaction(record){
-  if(busy)return;
+  if(busy||!acquire('rights'))return;
   setBusy(true);
   const hash=record.hash;
   setActivity('Finalizing on GenLayer','Waiting for validators, successful execution and finalized storage read-back. Do not sign the same action twice.','working',2,hash);
@@ -276,17 +282,19 @@ async function followTransaction(record){
 }
 async function signWrite(address,functionName,args,verification={}){
   if(writeRecord())throw new Error('An existing signed transaction needs rechecking before you can send another.');
-  const client=await signer();
+  if(unified&&sessionStorage.getItem('rightrail-v2-pending'))throw Error('Recheck the existing V2 transaction before signing another.');
+  if(!acquire('rights'))throw Error('Another wallet action is in progress.');
   setBusy(true);
   setActivity('Confirm in your wallet','Review the contract method, transaction details and network before signing.','working',1);
   try{
+    const client=await signer(), signingAccount=account;
     setActivity('Estimating test GEN fee','Unsigned Studio fee simulation. No transaction sent.','working',1);
     const prepared=await prepareFeeWrite(client,address,functionName,args);
-    if((await window.ethereum.request({method:'eth_accounts'}))?.[0]?.toLowerCase()!==account.toLowerCase()||parseInt(await window.ethereum.request({method:'eth_chainId'}),16)!==61999)throw Error('Wallet changed during fee estimation');
+    if((await window.ethereum.request({method:'eth_accounts'}))?.[0]?.toLowerCase()!==signingAccount.toLowerCase()||parseInt(await window.ethereum.request({method:'eth_chainId'}),16)!==61999)throw Error('Wallet changed during fee estimation');
     setActivity('Confirm in your wallet','Estimated fee deposit: '+prepared.fee+' test GEN. Review and approve only the intended action.','working',1);
     const hash=await client.writeContract(prepared.write);
     if(!/^0x[0-9a-fA-F]{64}$/.test(hash||''))throw new Error('Wallet did not return a valid transaction hash.');
-    const record={hash,functionName,args,actor:account,address,verification,created:Date.now()};
+    const record={hash,functionName,args,actor:signingAccount,address,verification,created:Date.now()};
     keepRecord(record);
     setBusy(false);
     await followTransaction(record);
@@ -341,10 +349,11 @@ const DEMO_REQUESTS={
 };
 function fillDemoRequest(kind){
   const example=DEMO_REQUESTS[kind];
-  $('requestAssetId').value='1';
-  $('usageText').value=example.usage;
+  const asset=unified?($('requestAssetId').value||'4'):'1';
+  $('requestAssetId').value=asset;
+  $('usageText').value=unified?example.usage.replaceAll('Aurora Education Pack','the selected resource'):example.usage;
   $('attributionText').value=example.attribution;
-  notify('Loaded '+kind.toUpperCase()+' test case for Asset #1. No transaction was submitted. Review the request, then sign when ready.','ok');
+  notify('Loaded '+kind.toUpperCase()+' test case for Asset #'+asset+'. No transaction was submitted. Review the request, then sign when ready.','ok');
 }
 $('allowExample').onclick=()=>fillDemoRequest('permit');
 $('denyExample').onclick=()=>fillDemoRequest('deny');
@@ -371,7 +380,8 @@ async function lookupRequest(requestId){
   const identity=requesterWalletStatus(record.requester,account);
   const stale=record.policy_version!==asset.version;
   const allowed=Boolean(identity.match&&await api('permit',{id:requestId,actor:account}));
-  const receipt=identity.match ? await api('receipt',{id:requestId,actor:account}) : '';
+  const receipt=!unified&&identity.match ? await api('receipt',{id:requestId,actor:account}) : '';
+  if(unified)$('requestId').value=requestId;
   const historicalPermit=record.decision==='PERMIT'&&stale;
   const currentDenied=stale||record.decision==='DENY'||record.decision==='REVIEW';
   const badge=historicalPermit?'HISTORICAL PERMIT · REVOKED':record.decision;
@@ -390,7 +400,8 @@ async function lookupRequest(requestId){
     infoRow('Policy snapshot','v'+record.policy_version+' · current v'+asset.version,stale?'denied':'normal')+
     infoRow('Usage',record.usage)+infoRow('Attribution',record.attribution)+
     infoRow('Wallet permit',allowed?'VALID for connected wallet':stale?'REVOKED — POLICY VERSION CHANGED':identity.match?'NOT GRANTED by current policy':'NOT CHECKED — connect the original Requester',allowed?'normal':'denied')+
-    infoRow('Access receipt',receipt?(stale?'ARCHIVED / NOT VALID FOR ACCESS · ':'')+JSON.stringify(parse(receipt)):identity.match?'No matching receipt for connected wallet':'Receipt belongs to Requester, not the connected wallet',receipt&&allowed?'normal':'neutral');
+    (unified?infoRow('Next step',record.decision==='PERMIT'&&!stale?'Creator may issue a scoped grant for a configured asset.':'No current permit; grant issuance unavailable','neutral'):infoRow('Access receipt',receipt?(stale?'ARCHIVED / NOT VALID FOR ACCESS · ':'')+JSON.stringify(parse(receipt)):identity.match?'No matching receipt for connected wallet':'Receipt belongs to Requester, not the connected wallet',receipt&&allowed?'normal':'neutral'));
+  if(unified)return {record,asset,allowed,receipt,identity};
   $('gateRequestId').value=requestId;
   const signBtn=$('accessForm').querySelector('button[type="submit"]');
   signBtn.disabled=!identity.match||Boolean(receipt)||!allowed;
@@ -400,7 +411,7 @@ async function lookupRequest(requestId){
 $('lookupRequestForm').onsubmit=async e=>{
   e.preventDefault();try{await lookupRequest(inputId($('lookupRequestId').value))}catch(err){$('requestResult').textContent=err.message}
 };
-$('accessForm').onsubmit=async e=>{
+if($('accessForm'))$('accessForm').onsubmit=async e=>{
   e.preventDefault();
   try{
     checkReady();
@@ -417,7 +428,7 @@ $('accessForm').onsubmit=async e=>{
   }catch(err){notify(err.message,'error')}
 };
 let unlockPending=false;
-$('unlockBtn').onclick=async()=>{
+if($('unlockBtn'))$('unlockBtn').onclick=async()=>{
   if(unlockPending || busy) return;
   unlockPending=true;
   $('unlockBtn').disabled=true;
@@ -478,7 +489,7 @@ $('unlockBtn').onclick=async()=>{
 $('clearTx').onclick=()=>{if(!busy){setActivity('Ready when you are.','Wallet actions will appear here with their real hash and execution status.');$('recheckTx').hidden=true}};
 $('recheckTx').onclick=async()=>{const record=writeRecord();if(record&&!busy)await followTransaction(record)};
 (async()=>{
- showPage(window.location.hash.slice(1)||'explore',false);
+ showPage(pages.includes(window.location.hash.slice(1))?window.location.hash.slice(1):'explore',false);
  try{
   const draft=JSON.parse(sessionStorage.getItem('rightrail-draft-v1')||'null');
   if(draft){$('assetTitle').value=draft.title||'';$('contentDigest').value=draft.digest||'';$('assetPolicy').value=draft.policy||''}

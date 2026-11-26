@@ -1,4 +1,4 @@
-import './v2.css';
+import {workspaceState,subscribe,acquire,release} from '../lib/workspace-state.js';
 import {feeClient,prepareFeeWrite} from '../lib/fee-write.js';
 import {getAddress} from 'viem';
 import {createClient} from 'genlayer-stable';
@@ -15,28 +15,20 @@ const id=s=>{const n=Number(s);if(!Number.isSafeInteger(n)||n<1||n>99999999)thro
 let config=null,actor=null,busy=false;
 const reader=createClient({chain:studionet});
 const read=(address,functionName,args=[])=>reader.readContract({address:getAddress(address),functionName,args,transactionHashVariant:TransactionHashVariant.LATEST_FINAL});
-function status(msg){$('activity').textContent=msg}
+function status(msg){$('activity').textContent=msg;$('v2Activity').dataset.active='true';}
 function stash(k,v){sessionStorage.setItem(k,JSON.stringify(v))}
 function load(k){try{return JSON.parse(sessionStorage.getItem(k)||'null')}catch{return null}}
 function clear(k){sessionStorage.removeItem(k)}
 function buttons(){
-  document.querySelectorAll('[data-sign]').forEach(b=>b.disabled=busy||!config||!actor||!!load(key));
-  $('deliver').disabled=busy||!config||!actor||!!load(key)||!load(proofKey);
-  $('wallet').textContent=actor?'Disconnect':'Connect wallet';
-  $('wallet').disabled=busy;
-  $('account').textContent=actor||'No wallet connected';
-  $('recheck').disabled=busy||!config||!load(key);
+  const locked=busy||!!workspaceState().owner;
+  const blocked=locked||!config||!actor||!!load(key)||!!load('rightrail-studionet-pending-v1');
+  document.querySelectorAll('[data-sign]').forEach(b=>b.disabled=blocked);
+  $('deliver').disabled=blocked||load(proofKey)?.actor!==actor;
+  $('recheck').disabled=locked||!config||!load(key);
 }
 function resetContent(){$('content').textContent='No content delivered.'}
-async function run(fn){if(busy)return;busy=true;buttons();try{await fn()}catch(e){status(e?.message||String(e))}finally{busy=false;buttons()}}
+async function run(fn){if(busy||!acquire('v2'))return;busy=true;buttons();try{await fn()}catch(e){status(e?.message||String(e))}finally{busy=false;release('v2');buttons()}}
 function ready(){if(!config)throw Error('V2 deployment not configured. No transaction sent.')}
-async function connect(){
-  if(actor){actor=null;resetContent();buttons();return}
-  if(!window.ethereum)throw Error('Install an EIP-1193 wallet');
-  const accounts=await window.ethereum.request({method:'eth_requestAccounts'});
-  if(!address(accounts?.[0]))throw Error('No valid account');
-  actor=accounts[0].toLowerCase();buttons();
-}
 async function signer(){
   ready();
   if(!actor||!window.ethereum)throw Error('Connect wallet');
@@ -51,6 +43,8 @@ async function grant(n){
   ready();const g=parse(await read(config.gate,'get_grant',[n]));
   if(g.id!==n)throw Error('Grant binding failed');
   $('grant').textContent=JSON.stringify(g,null,2);
+  const state=await read(config.gate,'can_consume',[n,g.actor]);
+  $('grantSummary').replaceChildren(grantCard(g,state));
   return g;
 }
 async function recheck(){
@@ -72,6 +66,7 @@ async function recheck(){
     const g=await grant(id(n));
     if(g.request_id!==p.args[0]||g.owner!==p.actor||g.max_uses!==p.args[2]||g.expires_at-g.issued_at!==p.args[1])throw Error('Grant readback mismatch');
     $('grantId').value=n;
+    document.querySelector('.flowbar [data-jump="delivery"]').click();
   }else if(p.method==='revoke_grant'){
     const g=await grant(p.args[0]);if(!g.revoked||g.owner!==p.actor)throw Error('Revocation not verified');
   }else if(p.method==='consume_access'){
@@ -84,9 +79,10 @@ async function recheck(){
     await grant(p.args[0]);
   }else throw Error('Unknown pending action');
   clear(key);status('FINALIZED / SUCCESS · stored V2 state independently read back.');
+  try{const stats=parse(await read(config.gate,'stats'));$('grantsCount').textContent=stats.grants;$('v2ReceiptsCount').textContent=stats.receipts;}catch{}
 }
 async function write(method,args,message=null){
-  if(load(key))throw Error('Recheck pending transaction first');
+  if(load(key)||load('rightrail-studionet-pending-v1'))throw Error('Recheck pending transaction first');
   const client=await signer(), owner=actor;
   // Test that recovery storage is available before signing.
   stash(key,{preparing:true});clear(key);
@@ -105,7 +101,7 @@ async function write(method,args,message=null){
   }
   if(load(key))status('Still pending or readback unavailable. Recheck the same transaction; do not sign again.');
 }
-$('wallet').onclick=()=>run(connect);
+subscribe(s=>{if(actor!==s.account){actor=s.account;resetContent();}buttons()});
 $('issue').onsubmit=e=>{e.preventDefault();run(async()=>{
   ready();const requestId=id($('requestId').value),ttl=id($('ttl').value),uses=id($('uses').value);
   if(ttl<60||ttl>2592000||uses>100)throw Error('Grant bounds invalid');
@@ -162,18 +158,35 @@ $('deliver').onclick=()=>run(async()=>{
 
 });
 $('recheck').onclick=()=>run(recheck);
-window.ethereum?.on?.('accountsChanged',()=>{actor=null;resetContent();buttons()});
-window.ethereum?.on?.('chainChanged',()=>{actor=null;resetContent();buttons()});
+
 async function init(){
   try{
     const r=await fetch('/api/v2-access',{cache:'no-store'}),b=await r.json();
     if(!r.ok||!b.ok||b.chainId!==chain||!address(b.gate)||!address(b.rights)||!Array.isArray(b.assetIds))throw Error(b.error||'V2 not configured');
     const details=(b.assets||[]).map(a=>'Asset #'+a.id+' · '+(a.verified?'SHA-256 VERIFIED':'AWAITING MATCHING ON-CHAIN ASSET')+' · '+a.digest).join(' | ');
     config=b.ready===true?b:null;
-    $('config').textContent=(config?'V2 CONFIGURED':'V2 LOCKED')+' · contract link verified · '+(b.storeOnline?'Redis PING verified; optional replay test below':b.storeConfigured?'Redis not responding':'Delivery store missing')+' · '+details;
+    $('config').textContent=(config?'V2 READY':'V2 LOCKED')+' · '+(b.storeOnline?'Redis online':'Redis unavailable')+' · '+(b.assetIds||[]).map(x=>'Asset #'+x+' SHA-256 verified').join(', ');
+    $('config').title=details;
+    if(config){const stats=parse(await read(config.gate,'stats'));$('grantsCount').textContent=stats.grants;$('v2ReceiptsCount').textContent=stats.receipts;}
     $('config').dataset.ready=config?'true':'false';
   }catch(e){$('config').textContent='V2 LOCKED · '+(e?.message||'configuration unavailable')+' · No transaction will be sent.';$('config').dataset.ready='false'}
   const p=load(key);if(p?.tx){link(p.tx);status('Saved transaction. Recheck same hash before any new action.')}
   buttons();
 }
+function element(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n}
+function grantCard(g,can,receipt=null,links=null){
+  const phase=g.revoked?'REVOKED':Date.now()>=g.expires_at*1000?'EXPIRED':g.used>=g.max_uses?'QUOTA EXHAUSTED':can?'ACTIVE':'BLOCKED';
+  const el=element('article',undefined,'grant-card');const top=element('div',undefined,'grant-top');top.append(element('strong','Grant #'+g.id),element('span',phase,'grant-state '+(phase==='ACTIVE'?'good':'bad-text')));el.append(top);
+  const used=element('div',g.used+' / '+g.max_uses+' used','quota');el.append(used);const bar=element('div',undefined,'quota-track');const fill=element('div');fill.style.width=(100*g.used/g.max_uses)+'%';bar.append(fill);el.append(bar);
+  const meta=[['Request','#'+g.request_id],['Asset','#'+g.asset_id],['Requester',g.actor.slice(0,8)+'…'+g.actor.slice(-4)],['Expires (local)',new Date(g.expires_at*1000).toLocaleString()],['Can consume',String(can)],['Revoked',String(g.revoked)]];
+  if(receipt)meta.push(['Receipt','#'+receipt.id]);for(const [k,v] of meta){const row=element('div',undefined,'audit-meta');row.append(element('span',k),element('b',v));el.append(row)}
+  if(links){const list=element('div',undefined,'audit-links');for(const [label,tx] of links){const a=element('a',label+' ↗');a.href='https://explorer-studio.genlayer.com/tx/'+tx;a.target='_blank';a.rel='noopener';list.append(a)}el.append(list)}
+  return el;
+}
+const proofLinks=[
+[['Issue','0x19e3adb638f88bb118e05ca0c32ae8120592bb921e17f574cb1c84991c036e6c'],['Consume','0x05b5d4e379bc9085ef948932aab42c07cdd4f4398accae904941fced78af6308'],['Revoke','0x3ada6c1d1c66ae8dd661fb3b7746be67d9c9b40512d8d4906006b2995c87b374']],
+[['Issue','0xecdd8cae0e5f3b3fc77b74c4b5f379242c31b8196bb1f4d446a0adab01d44c76'],['Consume','0xe64c8caba7d13f3732407849f5d284a07aa13d4c0fc63c24e1231dec9ff1419d']],
+[['Issue','0x5b32710d37f34438ff56e78e6fdc964f3c6c390e8ae019760028e077c97811bf'],['Consume','0xcd3e11011ab5c2c73036233d834ac748046c36e2f32c79a7624f9bb2d995ac50']]];
+async function audit(){const btn=$('refreshAudit');btn.disabled=true;$('auditStatus').textContent='Reading finalized state…';$('auditCards').replaceChildren();$('auditRaw').textContent='Reading…';try{ready();const stats=parse(await read(config.gate,'stats'));const entries=await Promise.all([1,2,3].map(async n=>{const g=parse(await read(config.gate,'get_grant',[n])),rr=parse(await read(config.gate,'get_receipt',[n]));const [canConsume,canDeliver,permit]=await Promise.all([read(config.gate,'can_consume',[n,g.actor]),read(config.gate,'can_deliver',[n,rr.actor]),read(config.rights,'permit_status',[g.request_id,g.actor])]);if(g.id!==n||rr.grant_id!==g.id||rr.actor!==g.actor)throw Error('Evidence binding mismatch');return {grant:g,receipt:rr,canConsume,canDeliver,permit}}));const cross=await read(config.gate,'can_consume',[3,entries[0].grant.actor]);const crossDelivery=await read(config.gate,'can_deliver',[3,entries[0].grant.actor]);$('auditCards').replaceChildren(...entries.map((e,i)=>grantCard(e.grant,e.canConsume,e.receipt,proofLinks[i])));$('auditRaw').textContent=JSON.stringify({observedAt:new Date().toISOString(),stats,entries,crossWalletConsume:cross,crossWalletDeliver:crossDelivery},null,2);$('auditStatus').textContent='Latest-final readback · '+new Date().toLocaleString()+' · Cross-wallet consume: '+cross+' · Cross-wallet deliver: '+crossDelivery;}catch(e){$('auditStatus').textContent='Readback unavailable: '+e.message;$('auditRaw').textContent='No verified snapshot.'}finally{btn.disabled=false}}
+$('refreshAudit').onclick=audit;
 init();
