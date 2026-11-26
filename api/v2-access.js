@@ -10,8 +10,12 @@ const gate=(process.env.RIGHTRAIL_V2_GATE_ADDRESS||'').toLowerCase();
 const rights=(process.env.RIGHTRAIL_RIGHTS_ADDRESS||'').toLowerCase();
 const host=process.env.RIGHTRAIL_V2_HOST||'';
 // Accept standard Upstash integration variables only as a paired fallback.
-const redis=process.env.RIGHTRAIL_V2_REDIS_URL||process.env.KV_REST_API_URL||process.env.UPSTASH_REDIS_REST_URL||'';
-const token=process.env.RIGHTRAIL_V2_REDIS_TOKEN||process.env.KV_REST_API_TOKEN||process.env.UPSTASH_REDIS_REST_TOKEN||'';
+const redisPairs=[
+  [process.env.RIGHTRAIL_V2_REDIS_URL,process.env.RIGHTRAIL_V2_REDIS_TOKEN],
+  [process.env.KV_REST_API_URL,process.env.KV_REST_API_TOKEN],
+  [process.env.UPSTASH_REDIS_REST_URL,process.env.UPSTASH_REDIS_REST_TOKEN]
+];
+const [redis,token]=redisPairs.find(([url,secret])=>url||secret)||['',''];
 const storeConfigured=()=>/^https:\/\/[a-z0-9-]+\.upstash\.io\/?$/.test(redis)&&Boolean(token);
 
 function contentMap(){
